@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.5.3
+- Minimap: quest marks from far away no longer show as if they were next to you. Hand-ins that are ready, and quests to pick up that are further off, ride on the rim, small and dimmed, with the distance when you hover.
+
 ## 2.5.2
 First public release (beta).
 

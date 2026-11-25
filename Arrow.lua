@@ -97,7 +97,11 @@ local function DrawPins()
   if pins.RemoveAllMinimapIcons then pcall(pins.RemoveAllMinimapIcons, pins, REF) end
   if not t then return end
   miniPin = miniPin or Pin(12)
-  pins:AddMinimapIconMap(REF, miniPin, t.m, t.x, t.y, true, true)
+  local hbd = NS.HBD()
+  local wx, wy, wi
+  if hbd then wx, wy, wi = hbd:GetWorldCoordinatesFromZone(t.x, t.y, t.m) end
+  miniPin:Hide()
+  if wx and pins.AddMinimapIconWorld then pins:AddMinimapIconWorld(REF, miniPin, wi, wx, wy, true) else pins:AddMinimapIconMap(REF, miniPin, t.m, t.x, t.y, true, true) end
   if Ar.Picked() then
     worldPin = worldPin or Pin(18)
     pins:AddWorldMapIconMap(REF, worldPin, t.m, t.x, t.y, HBD_PINS_WORLDMAP_SHOW_PARENT or 1)

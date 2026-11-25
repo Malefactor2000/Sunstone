@@ -247,6 +247,10 @@ local function Pin(kind)
       local text = type(l) == "function" and l() or l
       if type(text) == "string" then GameTooltip:AddLine(text, C.text[1], C.text[2], C.text[3], true) end
     end
+    if kind == "mini" and self.rim and self.edge and d.wx then
+      local px, py = NS.HBD():GetPlayerWorldPosition()
+      if px then GameTooltip:AddLine(string.format("%d yards away, this way", math.floor(math.sqrt((d.wx - px) ^ 2 + (d.wy - py) ^ 2) + 0.5)), C.accent[1], C.accent[2], C.accent[3]) end
+    end
     if kind == "world" then GameTooltip:AddLine("Click: point the arrow here.", C.dim[1], C.dim[2], C.dim[3], true) end
     GameTooltip:Show()
   end)
@@ -270,16 +274,93 @@ local function Put(pins, d)
   w:SetSize(d.size, d.size)
   w.glyph:SetTexture(NS.MEDIA .. "pin_" .. d.glyph .. ".png")
   w.glyph:SetVertexColor(d.c[1], d.c[2], d.c[3], 1)
-  w:Show()
+  w:Hide() -- (the map library shows it when its place is on the map)
   pins:AddWorldMapIconMap(REF, w, d.m, d.x, d.y, HBD_PINS_WORLDMAP_SHOW_PARENT or 1)
-  if Part("mini") then
+end
+
+---------------------------------------------------------------------------
+-- The minimap: what's near in its place; hand-ins and quests to pick up that are further off ride on its rim, small and dimmed, with the distance
+---------------------------------------------------------------------------
+local NEAR = 520                      -- yards: past this nothing can be inside the minimap
+local RIM = { ask = { 4, 1e9 }, bang = { 4, 700 } } -- on the rim: how many of each, and how far off they may be
+local miniAt
+local function MiniClear()
+  local pins = NS.Pins()
+  if pins then pins:RemoveAllMinimapIcons(REF) end
+  for i = 1, used.mini do
+    local p = pools.mini[i]
+    p:Hide()
+    p:ClearAllPoints()
+  end
+  used.mini = 0
+end
+-- -> { { d, yards, rim } }: what the minimap shows from a spot, nearest first
+function Q.MiniList(px, py, inst)
+  local hbd, all = NS.HBD(), {}
+  for _, d in ipairs(Q.items) do
+    if d.wx == nil then
+      local ok, wx, wy, wi = pcall(hbd.GetWorldCoordinatesFromZone, hbd, d.x, d.y, d.m)
+      d.wx, d.wy, d.wi = ok and wx or false, wy, wi
+    end
+    if d.wx and d.wi == inst then
+      all[#all + 1] = { d, math.sqrt((d.wx - px) ^ 2 + (d.wy - py) ^ 2) }
+    end
+  end
+  table.sort(all, function(a, b) return a[2] < b[2] end)
+  local out, rim = {}, {}
+  for _, e in ipairs(all) do
+    local d = e[1]
+    local r = d.rim and RIM[d.glyph]
+    if r and e[2] <= r[2] and (e[2] > 60 and (rim[d.glyph] or 0) < r[1]) then
+      rim[d.glyph] = (rim[d.glyph] or 0) + 1
+      e[3] = true
+      out[#out + 1] = e
+    elseif e[2] <= NEAR then
+      out[#out + 1] = e
+    end
+  end
+  return out
+end
+function Q.Mini()
+  MiniClear()
+  miniAt = nil
+  local pins, hbd = NS.Pins(), NS.HBD()
+  if not pins or not hbd or not Part("mini") or not Q.Shown() or not pins.AddMinimapIconWorld then return end
+  local px, py, inst = hbd:GetPlayerWorldPosition()
+  if not px or not inst then return end
+  miniAt = { px, py, inst }
+  for _, e in ipairs(Q.MiniList(px, py, inst)) do
+    local d = e[1]
     local m = Pin("mini")
-    m.data = d
-    m:SetSize(math.min(13, d.size - 2), math.min(13, d.size - 2))
+    m.data, m.rim, m.edge = d, e[3], false
+    m.full = math.min(13, d.size - 2)
+    m:SetSize(m.full, m.full)
+    m:SetAlpha(1)
     m.glyph:SetTexture(NS.MEDIA .. "pin_" .. d.glyph .. ".png")
     m.glyph:SetVertexColor(d.c[1], d.c[2], d.c[3], 1)
-    m:Show()
-    pins:AddMinimapIconMap(REF, m, d.m, d.x, d.y, true, false)
+    m:Hide() -- (the map library shows it when it's near, or on the rim)
+    pins:AddMinimapIconWorld(REF, m, d.wi, d.wx, d.wy, e[3] or false)
+  end
+end
+-- every second: again when you've moved on, and the ones on the rim small and dimmed
+function Q.MiniTick()
+  if not miniAt or not Q.Shown() then return end
+  local hbd, pins = NS.HBD(), NS.Pins()
+  local px, py, inst = hbd:GetPlayerWorldPosition()
+  if not px then return end
+  if inst ~= miniAt[3] or (px - miniAt[1]) ^ 2 + (py - miniAt[2]) ^ 2 > 60 * 60 then Q.Mini() end
+  if not pins.IsMinimapIconOnEdge then return end
+  for i = 1, used.mini do
+    local m = pools.mini[i]
+    if m.rim then
+      local ok, edge = pcall(pins.IsMinimapIconOnEdge, pins, m)
+      edge = ok and edge == true
+      if edge ~= m.edge then
+        m.edge = edge
+        m:SetAlpha(edge and 0.65 or 1)
+        m:SetSize(edge and 10 or m.full, edge and 10 or m.full)
+      end
+    end
   end
 end
 
@@ -287,11 +368,9 @@ local function Clear()
   local pins = NS.Pins()
   if not pins then return end
   pins:RemoveAllWorldMapIcons(REF)
-  pins:RemoveAllMinimapIcons(REF)
-  for k, pool in pairs(pools) do
-    for i = 1, used[k] do pool[i]:Hide() end
-    used[k] = 0
-  end
+  MiniClear()
+  for i = 1, used.world do pools.world[i]:Hide() end
+  used.world = 0
   Q.items = {}
 end
 
@@ -301,6 +380,7 @@ function Q.Draw()
   local pins = NS.Pins()
   if not pins or not Q.Shown() or not E.Lib() then wantedNpc = {} Q.Plates() return end
   for _, d in ipairs(List_()) do Put(pins, d) end
+  NS.Safe("quest pins", Q.Mini)
   Q.Plates()
 end
 -- for the smooth map: there too when Questie draws the game map's own
@@ -327,7 +407,7 @@ List_ = function()
         lines[#lines + 1] = Title(qid)
         if E.QuestLevel(qid) == 0 or E.QuestLevel(qid) >= Level() - 5 then low = false end
       end
-      Put(pins, { m = g.m, x = g.x, y = g.y, glyph = "bang", c = low and DIM or GOLD, size = 16, t = g.who, lines = lines })
+      Put(pins, { m = g.m, x = g.x, y = g.y, glyph = "bang", c = low and DIM or GOLD, size = 16, t = g.who, lines = lines, rim = not low })
     end
   end
   if Part("takes") then
@@ -335,7 +415,7 @@ List_ = function()
       local lines = {}
       for _, qid in ipairs(g.ready) do lines[#lines + 1] = "Hand in: " .. Title(qid) end
       for _, qid in ipairs(g.later) do lines[#lines + 1] = "|cff" .. NS.HEX.dim .. Title(qid) .. " (not done yet)|r" end
-      Put(pins, { m = g.m, x = g.x, y = g.y, glyph = "ask", c = #g.ready > 0 and GOLD or DIM, size = #g.ready > 0 and 18 or 14, t = g.who, lines = lines })
+      Put(pins, { m = g.m, x = g.x, y = g.y, glyph = "ask", c = #g.ready > 0 and GOLD or DIM, size = #g.ready > 0 and 18 or 14, t = g.who, lines = lines, rim = #g.ready > 0 })
     end
   end
   return out
@@ -425,6 +505,8 @@ function Q:Init()
   NS.On("QUEST_REMOVED", All)
   NS.On("QUEST_TURNED_IN", All)
   NS.On("PLAYER_LEVEL_UP", All)
+  C_Timer.NewTicker(1, function() NS.Safe("quest pins", Q.MiniTick) end)
+  NS.On("PLAYER_ENTERING_WORLD", function() C_Timer.After(3, function() if #Q.items > 0 then NS.Safe("quest pins", Q.Mini) end end) end)
   NS.On("NAME_PLATE_UNIT_ADDED", function(unit) if type(unit) == "string" then NS.Safe("quest plates", Plate, unit) end end)
   NS.On("NAME_PLATE_UNIT_REMOVED", function(unit) local m = plates[unit] if m then m:Hide() end end)
 end
