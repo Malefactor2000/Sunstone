@@ -29,7 +29,9 @@
     what.textContent = "";
     text = null;
     $("send").disabled = true;
-    $("forget").hidden = true;
+    $("forget").disabled = true;
+    $("sure").hidden = true;
+    $("backsay").textContent = "";
     if (!s) { say(""); return; }
     const t = read(s);
     let d = null;
@@ -62,7 +64,8 @@
     text = t;
     sent = false;
     $("send").disabled = false;
-    $("forget").hidden = false;
+    $("send").textContent = "Send";
+    $("forget").disabled = false;
     say("This is what would be sent. Nothing has been yet.");
   }
 
@@ -86,18 +89,30 @@
     try {
       const d = await call("POST", "/share", text);
       sent = true;
-      say(d.replaced ? "Sent. Your newer finds replace the older ones. Thank you!" : "Sent. Thank you! They come back to everyone with the next update.", "good");
+      $("send").textContent = "Sent";
+      say((d.replaced ? "Sent. Your newer finds replace the older ones. Thank you! " : "Sent. Thank you! They come back to everyone with the next update. ") + "You're done: you can close this page.", "good");
     } catch (e) {
       $("send").disabled = false;
       say("Not sent: " + e.message, "bad");
     }
   });
-  $("forget").addEventListener("click", async () => {
+  $("forget").addEventListener("click", () => {
+    if (!text) return;
+    $("sure").hidden = false;
+    $("sure").focus();
+    $("backsay").textContent = "Are you sure? Your finds won't help in the next update.";
+  });
+  $("sure").addEventListener("click", async () => {
     if (!text) return;
     try {
       await call("DELETE", "/share/" + JSON.parse(text).id);
-      say("Deleted: nothing of yours is kept there now.", "good");
-    } catch (e) { say("Not deleted: " + e.message, "bad"); }
+      $("sure").hidden = true;
+      $("backsay").textContent = "Taken back: nothing of yours is kept there now.";
+      sent = false;
+      $("send").disabled = false;
+      $("send").textContent = "Send";
+      say("");
+    } catch (e) { $("backsay").textContent = "Not taken back: " + e.message; }
   });
   $("text").addEventListener("input", (e) => show(e.target.value));
   function fromLink() {

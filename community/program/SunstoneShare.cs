@@ -237,7 +237,7 @@ static class Program
             var ids = new List<string>();
             foreach (string k in set.Keys) if (k.StartsWith("sent.")) ids.Add(k.Substring(5));
             int n = 0;
-            try { foreach (string id in ids) { Web("DELETE", Server() + "/share/" + id, null); n++; } lastStatus = n > 0 ? "What you sent is deleted." : "Nothing of yours is there."; }
+            try { foreach (string id in ids) { Web("DELETE", Server() + "/share/" + id, null); n++; } lastStatus = n > 0 ? "Taken back: what you sent is removed." : "Nothing of yours is there."; }
             catch (Exception e) { lastStatus = "Not deleted (" + Why(e) + ")."; return; }
             foreach (string id in ids) { set.Remove("sent." + id); set.Remove("at." + id); }
             Put("v", "1");
@@ -260,7 +260,7 @@ static class Program
         {
             string text = "Sunstone Share sends the finds you switched on in the game (Sunstone, Guide, Share) to Sunstone's collector, by itself, at most twice a day.\n\n" +
                 "It sends only that text: numbers about creatures, quests, chests and vendors. No character, realm or account name, nothing about you or this PC.\n\n" +
-                "It sits by the clock. Right-click it to read the text, send now, stop, or delete what you've sent.\n\nStart it?";
+                "It sits by the clock. Right-click it to read the text, send now, stop, or take back what you've sent.\n\nStart it?";
             if (MessageBox.Show(text, "Sunstone Share", MessageBoxButtons.OKCancel, MessageBoxIcon.Information) != DialogResult.OK) return;
             Put("ok", "1");
         }
@@ -301,9 +301,9 @@ static class Program
                 }
         });
         menu.Items.Add(start);
-        menu.Items.Add("Delete what I've sent", null, delegate
+        menu.Items.Add("Take back what I've sent...", null, delegate
         {
-            if (MessageBox.Show("Delete everything this PC has sent to Sunstone's collector? (Numbers already in a released version stay there, with everyone's.)", "Sunstone Share", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+            if (MessageBox.Show("Remove everything you've sent from Sunstone's collector, so it won't be in the next update?\n\nThis does nothing to your own computer: there's nothing to clean up there. (Numbers already in a released version stay there, with everyone's.)", "Sunstone Share", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
             new Thread(delegate() { Forget(); icon.ShowBalloonTip(4000, "Sunstone Share", lastStatus, ToolTipIcon.None); }) { IsBackground = true }.Start();
         });
         menu.Items.Add(new ToolStripSeparator());
@@ -344,7 +344,7 @@ static class Program
             if (forget) Forget(); else Check(now);
             Directory.CreateDirectory(settingsDir);
             File.WriteAllText(Path.Combine(settingsDir, "status.txt"), lastStatus);
-            return lastStatus.StartsWith("Sent") || lastStatus.StartsWith("Nothing") || lastStatus.StartsWith("What") ? 0 : 1;
+            return lastStatus.StartsWith("Sent") || lastStatus.StartsWith("Nothing") || lastStatus.StartsWith("Taken") ? 0 : 1;
         }
         bool first;
         using (new Mutex(true, "SunstoneShare", out first))

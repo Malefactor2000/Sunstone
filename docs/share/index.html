@@ -43,13 +43,13 @@ ol { padding-left:22px; margin:.4em 0 }
 <p>In the game, press <b>Share finds</b> at the top of Sunstone's window and say <b>Yes</b>. From then on the button says <b>Send finds</b>: it gives you one link. Paste it into your browser's address bar and you land here with your finds filled in.</p>
 <textarea id="text" aria-label="Your finds" placeholder="Or paste the copied link or text here" spellcheck="false"></textarea>
 <div id="what"></div>
-<div class="row"><button id="send" disabled>Send</button><button id="forget" class="plain" hidden>Delete what I've sent</button></div>
+<div class="row"><button id="send" disabled>Send</button></div>
 <div id="say" role="status" aria-live="polite"></div>
 </section>
 
 <section>
 <h2>2. By itself</h2>
-<p>A small program for Windows sits by the clock and sends your finds after you log out, at most twice a day, only while sharing is on in the game. Right-click it to read the text first, pause, or delete what you've sent.</p>
+<p>A small program for Windows sits by the clock and sends your finds after you log out, at most twice a day, only while sharing is on in the game. Right-click it to read the text first, pause, or take back what you sent.</p>
 <ol>
 <li>In the game, press <b>Share finds</b> at the top of Sunstone's window, then <b>Yes</b> and <b>By itself</b>.</li>
 <li>Get <b>SunstoneShare.exe</b> from the latest release, and run it. Windows may say it doesn't know the program: it's free and not signed. Its whole source is one file you can read.</li>
@@ -84,6 +84,11 @@ ol { padding-left:22px; margin:.4em 0 }
 <li>What everyone sends is pooled, checked against everyone else's, and comes back to all players with the next update. A number one player saw isn't used as a chance until others have seen it too.</li>
 </ul>
 </section>
+<details id="back" class="n"><summary>Changed your mind? Take back something you sent</summary>
+<p>This removes what you sent <b>from Sunstone's collector</b>, so it won't be in the next update. It does nothing to your own computer: there's nothing to clean up there. Paste your link at the top first, so it knows which one is yours.</p>
+<div class="row"><button id="forget" class="plain" disabled>Take it back</button><button id="sure" class="plain" hidden>Yes, remove my finds from the collector</button></div>
+<div id="backsay" role="status" aria-live="polite"></div>
+</details>
 <p class="n">Sunstone is free software (GPL-3.0). World of Warcraft is a trademark of Blizzard Entertainment; Sunstone isn't connected with or endorsed by Blizzard.</p>
 </main>
 <script src="share.js"></script>
