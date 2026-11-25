@@ -114,6 +114,8 @@ local function FactionPage(f)
   return { title = f.n, icon = "Interface\\Icons\\INV_Jewelry_Ring_03", rows = rows, sub = "What they sell, and how to get there" }
 end
 
+F.FactionPage = FactionPage
+
 local function RepRows()
   F.BuildRepQuests()
   local rows, list, level = {}, {}, UnitLevel("player")

@@ -2,7 +2,7 @@
 ## Title: Sunstone
 ## Notes: Leveling helper: XP runs, gear upgrades for every slot, grind spots, gold, professions, factions, talent plans and the shortest quest route.
 ## Author: Malefactor2000
-## Version: 2.5.3
+## Version: 2.5.4
 ## Category: Quests
 ## X-License: GPL-3.0
 ## OptionalDeps: TomTom, Questie, QuestieDB, WellTrodden, Auctionator
@@ -49,6 +49,8 @@ Flips.lua
 Crafting.lua
 TravelData.lua
 Travel.lua
+PlacesData.lua
+Places.lua
 NavData.lua
 Paths.lua
 Track.lua
@@ -69,6 +71,7 @@ Sets.lua
 Lists.lua
 XPRun.lua
 Sell.lua
+SoldWatch.lua
 Tips.lua
 Professions.lua
 CraftData.lua

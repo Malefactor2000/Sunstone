@@ -1,10 +1,14 @@
 # Changelog
 
+## 2.5.4
+- The search box finds every named place in the game (over 700 of them, towns and camps included) and forgives a letter or two. It also finds factions, dungeons, quests, recipes, items, pets and mounts by name.
+- Sold something you need? Sunstone tells you at once, across the top of the screen and in chat, while it's still under the vendor's Buyback tab: quest items, materials your professions use, upgrades, rare finds, things worth far more at the Auction House, and anything you mark Keep (Gold, Your bags). It can be switched off in Settings.
+
 ## 2.5.3
 - Minimap: quest marks from far away no longer show as if they were next to you. Hand-ins that are ready, and quests to pick up that are further off, ride on the rim, small and dimmed, with the distance when you hover.
 
 ## 2.5.2
-First public release (beta).
+First public release.
 
 - The world map is one smooth sheet: the wheel zooms from the whole world into a camp, dragging moves it, in the game's own parchment style with the land you've explored drawn in. Your route and its stops, quests, flight masters, boats and dungeon doors are on it, and every stop in the route list has a Zoom in button.
 - The route's lines are drawn over the explored land, through every zone on the way; show the whole route, just the next stop, or nothing. "Where I've been" draws the way you came when you want to retrace your steps.

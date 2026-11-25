@@ -133,6 +133,7 @@ local function Work(id, link, bound)
     end
     if r.ah and NS.Auction and NS.Auction.Age then r.age = NS.Auction.Age(id) end
   end
+  if NS.SoldWatch and NS.SoldWatch.Kept(id) then return Say("keep", "You marked it to keep.") end
   if TOOLS[id] then return Say("keep", "A tool you may need.") end
   if S.Camp(id) then return Say("keep", "For campsites: see Guide, Forever's systems.") end
   -- quests
@@ -283,6 +284,11 @@ end
 
 function S.Page(e, v)
   local rows = { { t = "|cff" .. HEX[v.v] .. WORD[v.v] .. "|r", d = v.why .. (v.alt and ("\n" .. v.alt) or ""), i = e.id, still = true } }
+  if NS.SoldWatch then
+    local kept = NS.SoldWatch.Kept(e.id)
+    rows[#rows + 1] = { t = kept and "You marked it to keep" or "Keep it, whatever happens?", still = true, ring = kept and "good" or nil, key = "keep" .. e.id, actLabel = kept and "Let it go" or "Keep",
+                        d = "Sunstone warns you at once if you sell it.", act = function() NS.SoldWatch.Keep(e.id, not kept) end }
+  end
   local bits = {}
   if v.vendor then bits[#bits + 1] = Money(v.vendor) .. " each at a vendor" .. (e.n > 1 and string.format(", %s for all %d", Money(v.vendor * e.n), e.n) or "") end
   local ok, text = false, nil

@@ -11,7 +11,7 @@
 --     before use.
 
 local ADDON, NS = ...
-NS.version = "2.5.3"
+NS.version = "2.5.4"
 
 function NS.CharKey() return (UnitName("player") or "?") .. "-" .. (GetRealmName() or "?") end
 
