@@ -52,6 +52,10 @@ so that there is a folder `AddOns\Sunstone` with `Sunstone.toc` in it. Restart t
 * Set bonuses, enchants on gear you try on, and effects that go off by chance aren't counted on the character page.
 * The inside maps of Forever's five newest dungeons are missing.
 
+## Free, and it stays free
+
+If it saved you a subscription and you're feeling generous, [a small donation](https://ko-fi.com/malefactor2000) is welcome and helps keep it going. It's never expected and unlocks nothing: everyone gets all of it.
+
 ## Reporting a problem
 
 Open an issue with a screenshot and what `/sun errors` prints. Please don't include anything private.
