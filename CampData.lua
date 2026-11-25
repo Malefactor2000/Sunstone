@@ -1,0 +1,82 @@
+-- Sunstone: everything for your campsite, as guides for Forever describe it (Warcraft Tavern, wow-professions.com, Method, Gfinity and the
+-- Warcraft Wiki, read November 2026; facts only, in our own words). Where the guides disagree it says so. Places 0-100 on the zone's map.
+-- objects: prof, tier (1-3), item, name, skill, what it does, bp = blueprint item, from = { boss, dungeon }, mats = { item, count (0 = not known) }
+-- (the crafting professions' own recipes are in Data.lua).
+SunstoneCamp = {
+objects = {
+{"Alchemy",1,279956,"Mana Well",20,"Mana back over time"},
+{"Alchemy",2,279970,"Fermenter",140,"A workbench for some Alchemy recipes",bp=273085,from={{"Rath'mael","Ruins of Lordaeron"}}},
+{"Alchemy",3,279990,"Alchemy Laboratory",300,"A workbench for some Alchemy recipes",bp=273112,from={{"Ras Frostwhisper","Scholomance"}}},
+{"Blacksmithing",1,279944,"Sharpening Wheel",20,"Strength"},
+{"Blacksmithing",2,279988,"Anvil",140,"An anvil to work at",bp=273086,from={{"Gilnid","The Deadmines"}}},
+{"Blacksmithing",3,279955,"Master Forge",300,"A forge for some Blacksmithing recipes",bp=273113,from={{"Golem Lord Argelmach","Blackrock Depths"}}},
+{"Cooking",1,279981,"Basic Campfire Kit",1,"The campfire itself, with room for 3 objects (needs Flint and Tinder)"},
+{"Cooking",2,279961,"Journeyman Campfire Kit",90,"A campfire with room for 5 objects",bp=273087,from={{"Lord Serpentis","Wailing Caverns"}},note="One guide says skill 140."},
+{"Cooking",2,279957,"Cookie's Feast",140,"Food with Stamina for everyone at the camp",bp=273102,from={{"Cookie","The Deadmines"}}},
+{"Cooking",3,279974,"Expert Campfire Kit",200,"A campfire with room for 10 objects",bp=273101,from={{"Slavecrusher Grox","Krol'dok Stronghold"}},note="Guides say 220 to use it, and one hadn't found where the blueprint drops."},
+{"Cooking",3,279982,"Iron Oven",300,"An oven for some Cooking recipes",bp=273115,from={{"Quartermaster Zigris","Lower Blackrock Spire"}}},
+{"Enchanting",1,279976,"Enchanted Lute",20,"All stats and resistances"},
+{"Enchanting",2,279985,"Arcane Salvager",140,"Better disenchanting",bp=273103,from={{"Rath'mael","Ruins of Lordaeron"},{"Shade of the Archmage","City of Dalaran"},{"Charlga Razorflank","Razorfen Kraul"}},note="Guides name different bosses."},
+{"Enchanting",3,279987,"Arcane Forge",300,"A workbench for some Enchanting recipes",bp=273116,from={{"Nanaya","Shaper's Terrace"}}},
+{"Engineering",1,279950,"Reagent Bot",20,"A vendor: class reagents, seeds, crafting supplies"},
+{"Engineering",2,279949,"Repair Bot",140,"Repairs for everyone at the camp",bp=273092,from={{"Sneed","The Deadmines"}}},
+{"Engineering",3,279989,"Anarchist's Workbench",300,"A workbench for some Engineering recipes",bp=273117,from={{"Ezra Grimm","Stratholme"}}},
+{"First Aid",1,279968,"First Aid Kit",20,"Stamina"},
+{"First Aid",2,279940,"Toxin Study",140,"Better healing potions and anti-venoms",bp=273105,from={{"Commander Springvale","Shadowfang Keep"}}},
+{"First Aid",3,279951,"Plague Doctor's Laboratory",300,"Better healing potions and poultices",bp=273118,from={{"Doctor Theolen Krastinov","Scholomance"}}},
+{"Fishing",1,279967,"Fish Bowl",20,"All stats, 8% more",mats={6291,1,3371,1}},
+{"Fishing",2,279965,"Fishing Rack",140,"Uncommon fish for an hour, and lures",bp=273141,from={{"Gelihast","Blackfathom Deeps"}},mats={4470,2,8925,1,8365,2},note="One guide adds: or fished up from pools."},
+{"Fishing",3,279966,"Fishing Hut",300,"Rare fish for an hour, and lures",bp=273119,from={{"Jammal'an the Prophet","The Temple of Atal'Hakkar"}},mats={4470,5,14048,2,273295,1}},
+{"Herbalism",1,279962,"Incense Candle",20,"Intellect",mats={2447,0,765,0}},
+{"Herbalism",2,279964,"Greenhouse",140,"Grows herbs from seeds you plant",bp=273106,from={{"Shadetooth","Excavation Site: Wetlands"}},mats={4470,2,8836,0,8831,0}},
+{"Herbalism",3,279947,"Seed Hybridizer",300,"Multiplies seeds, or crosses them",bp=273120,from={{"Tendris Warpwood","Dire Maul: West"}},mats={13465,4,8925,1,14047,2}},
+{"Leatherworking",1,279978,"Camp Tent",20,"Rested experience worth 5% of a level, once an hour"},
+{"Leatherworking",2,279941,"Tanning Rack",140,"A workbench for some Leatherworking recipes",bp=273096,from={{"Razorclaw the Butcher","Shadowfang Keep"}}},
+{"Leatherworking",3,279945,"Sewing Machine",300,"A workbench for some Leatherworking recipes",bp=273121,from={{"Vectus","Scholomance"}}},
+{"Mining",1,279960,"Lodestone",20,"Melee attack power",mats={2835,0,2840,0}},
+{"Mining",2,279948,"Rock Garden",140,"Grows a common ore vein now and then, and gives the Lodestone's attack power",bp=273097,from={{"Relic Guardian","Excavation Site: Wetlands"}},mats={2838,2,2772,1,2842,1}},
+{"Mining",3,279952,"Molten Foundry",300,"A foundry for smelting heavy thorium",bp=273122,from={{"Ambassador Flamelash","Blackrock Depths"}},mats={12359,5,12365,2,6037,1}},
+{"Skinning",1,279979,"Camp Chair",20,"2% more critical strikes",mats={2318,3,4470,2}},
+{"Skinning",2,279969,"Field Guide",140,"A book that teaches anyone at the camp to track beasts",bp=273098,from={{"Lady Anacondra","Wailing Caverns"}},mats={2319,3,5784,2,2321,1}},
+{"Skinning",3,279938,"Trapper's Workbench",300,"A workbench with a trap",bp=273109,from={{"Houndmaster Loksey","Scarlet Monastery: Library"},{"The Beast","Upper Blackrock Spire"}},mats={4470,2,4234,4,3575,1},note="Guides name two bosses."},
+{"Tailoring",1,279972,"Faction Banner",20,"Spirit",alt=279973},
+{"Tailoring",2,279943,"Spinning Wheel",140,"A workbench for some Tailoring recipes",bp=273099,from={{"Unstable Sentinel","City of Dalaran"}}},
+{"Tailoring",3,279959,"Loom",300,"A workbench for some Tailoring recipes",bp=273124,from={{"Baroness Anastari","Stratholme"}}},
+},
+-- Camping 101, one per profession: where it's handed in: { side ("" = both), map, x, y, who }
+learn = {
+["Skinning"]={{"A",1455,39.6,32.6,"Balthus Stoneflayer"},{"A",1438,42,50,"Radnaal Maneweaver"},{"A",1429,46.2,62.2,"Helene Peltskinner"},{"H",1454,63.2,45.2,"Thuwd"},{"H",1420,65.6,60,"Rand Rhobart"},{"H",1412,45,61.4,"Yonn Deepcut"},{"",2521,43.2,43.4,"Mendalass Tattermend"}},
+["Fishing"]={{"A",1426,35.4,40.2,"Paxton Ganter"},{"A",1457,47.4,56.6,"Astaia"},{"A",1429,47.6,62.2,"Lee Brown"},{"H",1411,63.2,45.2,"Lau'Tiki"},{"H",1420,67.2,51,"Clyde Kellen"},{"H",1412,44.6,60.6,"Uthan Stillwater"},{"",2521,45,48.4,"Fenn Fairweather"}},
+["First Aid"]={{"A",1426,47.2,52.6,"Thamner Pol"},{"A",1438,55.2,56.8,"Byancie"},{"A",1429,43.4,65.6,"Michelle Belle"},{"H",1411,54,42,"Rawrk"},{"H",1420,61.8,52.8,"Nurse Neela"},{"H",1412,46,63.8,"Vira Younghoof"},{"",2521,43,46.2,"Naleeia Tattermend"}},
+["Herbalism"]={{"A",1455,55.8,59.6,"Reyna Stonebranch"},{"A",1438,57.6,60.6,"Malorne Bladeleaf"},{"A",1429,39.8,48.4,"Herbalist Pomeroy"},{"H",1454,55.6,39.6,"Jandi"},{"H",1420,59.8,52.1,"Faruza"},{"H",1456,49.8,39.8,"Komin Winterhoof"}},
+},
+-- the quests that open camping, and the sleeping bag's chain (the last quest of each; QuestFind.lua works out the rest)
+outdoors = {95998,96101,96604,96605,96606,96607,96608},
+bag = {item=211527,last=79976,what="Lie in it while you rest: 1% more experience a minute, up to 3%, for two hours. An hour before you can use it again. It adds to the camp's own buffs."},
+-- a word on how, for quests that need it
+tips = {
+[79007]="The burned scouting tower just south of Camp Taurajo: click the remains. The note sends you across the sea to the Alexston Farmstead in Westfall. Horde's way there: the zeppelin from Orgrimmar to Grom'gol, then swim north along the coast.",
+[79008]="Wreckage at the Alexston Farmstead: click the remains. The note sends you to the southern Barrens. Alliance's way there: by road to Booty Bay, then the boat to Ratchet.",
+[79192]="Click the plank nailed up beside the second remains.",
+[79980]="The litter lies in a camp in the hills past Sun Rock Retreat; the mound of dirt is a short way further up from it.",
+[79974]="The figurine is on a ledge on the face of Stonewrought Dam: drop down to it from the top. Guards around level 30 stand near if you're Horde.",
+[79975]="From the Hillsbrad side follow Thoradin's Wall to a gap with a broken cart. Climb the cart and jump from it up onto the wall: the bag is in the walkway there.",
+[79976]="Click the rolled-up satchel next to the bag.",
+},
+-- the only camp decoration guides know: steps { text, about, map, x, y }
+banner = {item=278030,name="Scarlet Banner",what="A banner for your camp, for looks only. Any profession.",
+steps={
+{"Arathi Echo","From a grave behind the barn at Go'shek Farm, on its east side.",1417,62.2,54.5},
+{"Theramore Echo","From a grave in the graveyard across the bridge from Theramore Isle.",1445,63.7,42.4},
+{"Swamp Echo","By a tree at Splinterspear Junction, near the way to Deadwind Pass.",1435,16.8,53.6},
+{"Graveyard Echo","Inside Scarlet Monastery, Graveyard wing: the back corner beside the southern mausoleum."},
+{"Four statues in the Library wing's hallway","One echo at each, in this order: Blake Godwyn (warrior) the Swamp Echo, Primwell Skye (mage) the Arathi Echo, Janet Kaitway (paladin) the Theramore Echo, Brother Paxwell (priest) the Graveyard Echo. In the wrong order the dungeon has to be reset."}},
+note="From one guide, which says it works as it did in Season of Discovery."},
+rules = {
+{"How a camp works","Put down a campfire anywhere outdoors, then camp objects around it. Sit (/sit) for a minute and you get its buffs; other players' objects count too, and yours help them."},
+{"One each","A character can put down one object, again after an hour. Guides differ on how long a fire burns: ten minutes or an hour."},
+{"What you need first","The Adventurer, then The Great Outdoors (from level 4, in your starting zone). After those, the same people give a Camping 101 for each of your professions: reach skill 20 and hand it in for that profession's first object."},
+{"Buffs","A little weaker than the classes' own, and they don't add to them."},
+{"Legacy talents that help","Field Guide (objects ready sooner), Permanence (camp buffs last longer), Reagent Economy (first-tier objects cost no reagents)."},
+},
+}

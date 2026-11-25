@@ -1,0 +1,91 @@
+## Interface: 16001
+## Title: Sunstone
+## Notes: Leveling helper: XP runs, gear upgrades for every slot, grind spots, gold, professions, factions, talent plans and the shortest quest route.
+## Author: Malefactor2000
+## Version: 2.5.1
+## Category: Quests
+## X-License: GPL-3.0
+## OptionalDeps: TomTom, Questie, QuestieDB, WellTrodden, Auctionator
+## SavedVariables: SunstoneDB
+## SavedVariablesPerCharacter: SunstoneCharDB
+## IconTexture: Interface\AddOns\Sunstone\icon.png
+
+libs\HereBeDragons\LibStub\LibStub.lua
+libs\HereBeDragons\CallbackHandler-1.0\CallbackHandler-1.0.lua
+libs\HereBeDragons\HereBeDragons-2.0.lua
+libs\HereBeDragons\HereBeDragons-Pins-2.0.lua
+
+Core.lua
+LookData.lua
+Look.lua
+Data.lua
+MobData.lua
+QuestData.lua
+QuestDB.lua
+QuestRec.lua
+Weapons.lua
+ClassData.lua
+Engine.lua
+Plans.lua
+Inbox.lua
+GearList.lua
+Talents.lua
+TalentTree.lua
+Snapshot.lua
+Markers.lua
+Upgrades.lua
+Route.lua
+Recorder.lua
+CommunityData.lua
+Community.lua
+Finds.lua
+Share.lua
+MapView.lua
+ContinentData.lua
+Continent.lua
+Scan.lua
+Auction.lua
+Flips.lua
+Crafting.lua
+TravelData.lua
+Travel.lua
+NavData.lua
+Paths.lua
+Track.lua
+Nav.lua
+Trail.lua
+Arrow.lua
+Farm.lua
+DungeonData.lua
+BossData.lua
+Dungeons.lua
+CollectData.lua
+Collect.lua
+Gear.lua
+CharData.lua
+CharSheet.lua
+SetData.lua
+Sets.lua
+Lists.lua
+XPRun.lua
+Sell.lua
+Tips.lua
+Professions.lua
+CraftData.lua
+Crafts.lua
+Factions.lua
+MapPins.lua
+QuestPins.lua
+ZoneMapData.lua
+ZoneMap.lua
+Atlas.lua
+CampData.lua
+QuestFind.lua
+PetData.lua
+PetStats.lua
+PetPlan.lua
+Pets.lua
+Class.lua
+GuideData.lua
+Guide.lua
+UI.lua

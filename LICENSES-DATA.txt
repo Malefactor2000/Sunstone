@@ -1,0 +1,36 @@
+Sunstone: where its data comes from, and under which licences
+==============================================================
+
+OneForAll by Smoergi: dungeons, loot, recipes, hunter pets and more. Used with the author's permission (GPL-3.0).
+Questie / QuestieDB: quests, creatures, items. Read live from the installed addon; no copy of its database is part of this addon. Places and
+names in some tables (travel, pets, collections, NPCs) passed through it. Questie's team is fine with copying under the GPL-3.0 and is gathering
+its contributors' consent; some old contributions have no licence of their own. With thanks to everyone who worked on it.
+HereBeDragons by Nevcairiel (libs/HereBeDragons, unchanged; BSD), with LibStub (public domain) and CallbackHandler-1.0 (BSD).
+CMaNGOS classic-db: Classic loot tables, prices, quests and where creatures stand (GPL-3.0); none of the game's own quest texts.
+The numbers of pet skills, pet families, spells and talents, and which 3D model is whose: the game's own files (numbers only; models and pictures
+are shown from the player's own game, none are shipped). A pet's and an ordinary enemy's numbers by level: CMaNGOS classic-db. Which beasts teach the
+bats' and foxes' skills, training points and how many skills a pet can have: Petopia's Forever pages (facts, in our own words).
+The game's own files: which side creatures are on, where exploring counts, how Blackfathom Deeps' rooms lie, which pictures make up a zone's map (facts and
+file numbers; no pictures are shipped).
+Zone outlines (media, zones): drawn for Sunstone from which zone each patch of the game's own terrain belongs to; shapes only.
+Campsites: facts from guides for Forever (Warcraft Tavern, wow-professions.com, Method, Gfinity, the Warcraft Wiki), in our own words.
+SimGear Forever: stat weights (GPL-3.0). ProfessionDB: recipes (MIT).
+
+Forever Simple World Map 0.30.2 by Tarolg (CurseForge project 1728535): how the rooms of the dungeon maps are laid out (which of the game's
+own minimap pictures goes where, boss and entrance spots). The pictures themselves belong to the game and are not part of this addon.
+
+MIT License
+
+Copyright (c) 2026 Tarolg
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the
+following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self' https:; img-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Sunstone: share your finds</title>
+<style>
+:root { --bg:#17120e; --card:#211a14; --line:#3a2e22; --text:#d8c7a6; --dim:#9c8a72; --gold:#d8a53f; --good:#9dbb76; --bad:#d07a5f; }
+* { box-sizing:border-box }
+body { margin:0; background:var(--bg); color:var(--text); font:16px/1.55 Georgia, "Times New Roman", serif; }
+main { max-width:760px; margin:0 auto; padding:28px 16px 60px; }
+h1 { color:var(--gold); font-size:1.9rem; margin:0 0 4px; font-weight:normal; letter-spacing:.02em }
+h2 { color:var(--gold); font-size:1.2rem; font-weight:normal; margin:0 0 6px }
+p { margin:.4em 0 }
+.lead { color:var(--dim); margin-bottom:22px }
+section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px; margin:16px 0 }
+.n { color:var(--dim); font-size:.9rem }
+button, .b { display:inline-block; background:#3a2c18; color:var(--gold); border:1px solid #6b5126; border-radius:7px; padding:9px 18px; font:inherit; cursor:pointer; text-decoration:none }
+button:hover:not(:disabled), .b:hover { background:#4a3a20 }
+button:disabled { opacity:.45; cursor:default }
+button:focus-visible, textarea:focus-visible, a:focus-visible, summary:focus-visible { outline:2px solid var(--gold); outline-offset:2px }
+button.plain { background:none; border-color:var(--line); color:var(--dim) }
+textarea { width:100%; height:74px; background:#120e0b; color:var(--text); border:1px solid var(--line); border-radius:7px; padding:8px; font:13px/1.4 ui-monospace, Consolas, monospace; resize:vertical }
+ul { padding-left:20px; margin:.4em 0 } li { margin:.2em 0 }
+table { border-collapse:collapse; margin:8px 0 } td { padding:2px 18px 2px 0; font-variant-numeric:tabular-nums }
+td:last-child { color:var(--dim) }
+pre { white-space:pre-wrap; word-break:break-all; max-height:220px; overflow:auto; background:#120e0b; border:1px solid var(--line); border-radius:7px; padding:8px; font:12px/1.4 ui-monospace, Consolas, monospace }
+#say { min-height:1.6em; margin-top:8px } .good { color:var(--good) } .bad { color:var(--bad) }
+a { color:var(--gold) } summary { cursor:pointer; color:var(--gold) }
+.row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px }
+ol { padding-left:22px; margin:.4em 0 }
+</style>
+</head>
+<body>
+<main>
+<h1>Share your finds</h1>
+<p class="lead">Sunstone learns from what its players see: what creatures drop, XP at every level, vendor prices, and where pets and mounts nobody has found yet come from. Sharing is off until you switch it on in the game, and any of the three ways below is up to you. Sunstone works the same if you never share.</p>
+
+<section id="hand">
+<h2>1. By hand</h2>
+<p>In the game, press <b>Share finds</b> at the top of Sunstone's window and say <b>Yes</b>. From then on the button says <b>Send finds</b>: it gives you one link. Paste it into your browser's address bar and you land here with your finds filled in.</p>
+<textarea id="text" aria-label="Your finds" placeholder="Or paste the copied link or text here" spellcheck="false"></textarea>
+<div id="what"></div>
+<div class="row"><button id="send" disabled>Send</button><button id="forget" class="plain" hidden>Delete what I've sent</button></div>
+<div id="say" role="status" aria-live="polite"></div>
+</section>
+
+<section>
+<h2>2. By itself</h2>
+<p>A small program for Windows sits by the clock and sends your finds after you log out, at most twice a day, only while sharing is on in the game. Right-click it to read the text first, pause, or delete what you've sent.</p>
+<ol>
+<li>In the game, press <b>Share finds</b> at the top of Sunstone's window, then <b>Yes</b> and <b>By itself</b>.</li>
+<li>Get <b>SunstoneShare.exe</b> from the latest release, and run it. Windows may say it doesn't know the program: it's free and not signed. Its whole source is one file you can read.</li>
+<li>Tick <b>Start with Windows</b> in its menu if you want that.</li>
+</ol>
+<div class="row"><a class="b" href="https://github.com/Malefactor2000/Sunstone/releases/latest">Latest release</a> <a href="https://github.com/Malefactor2000/Sunstone/blob/main/community/program/SunstoneShare.cs">Read its source</a></div>
+<p class="n">To remove it: untick Start with Windows, Quit, delete the file. Nothing else is installed.</p>
+</section>
+
+<section>
+<h2>3. The AI version</h2>
+<p>Optional, for those who'd like to ask questions about their character: a desktop helper with an AI that runs on your own PC, offline. It can send your finds by itself too, with a switch in its Find tab (off until you turn it on).</p>
+<details><summary>What it needs and how to set it up</summary>
+<p>All free: Windows 10 or 11 and about 10 GB of space; the Questie and OneForAll addons (the program reads their data); a graphics card with 8 GB or more makes the AI quick, without one it's slow.</p>
+<ol>
+<li>Install <a href="https://www.python.org/downloads/">Python 3.13</a> (tick "Add python.exe to PATH"), and for the AI chat <a href="https://ollama.com/download">Ollama</a>, the program that runs the AI on your own PC.</li>
+<li>Get <b>Sunstone-with-AI</b> from the latest release, close WoW, unzip it and double-click <b>Set up Sunstone</b>. It says what it's going to get before it gets it; the AI model is about 5 GB.</li>
+<li>Start WoW, open <b>Sunstone</b> from the desktop shortcut, and type <b>/sun sync</b> in game once. <b>Ctrl+Alt+L</b> shows or hides it.</li>
+<li>To share by itself: say <b>Yes</b> to <b>Share finds</b> in game, then tick <b>Send my finds by itself</b> at the bottom of its Find tab.</li>
+</ol>
+<p class="n">To remove it: delete the Sunstone folder in your user folder and the shortcut, and uninstall Ollama if you don't use it for anything else.</p>
+</details>
+</section>
+
+<section>
+<h2>What's in it, and what never is</h2>
+<ul>
+<li><b>In it:</b> counts and averages of what your characters saw: kills, coins, drops, XP, fight times, quest rewards, vendor prices, chests, fishing, battlegrounds, dungeon runs; places to a hundredth of a map; names of creatures Sunstone didn't know; a random number standing for "the same sender".</li>
+<li><b>Never:</b> your character's, realm's, guild's or account's name, your gold, bags or gear, other players, chat, or anything about your PC.</li>
+<li>The collector keeps no IP addresses (a fingerprint that changes every day only counts how many shares came in, and is deleted the next day).</li>
+<li>A newer share of yours replaces the older one. Stopping in the game throws your sender number away.</li>
+<li>What everyone sends is pooled, checked against everyone else's, and comes back to all players with the next update. A number one player saw isn't used as a chance until others have seen it too.</li>
+</ul>
+</section>
+<p class="n">Sunstone is free software (GPL-3.0). World of Warcraft is a trademark of Blizzard Entertainment; Sunstone isn't connected with or endorsed by Blizzard.</p>
+</main>
+<script src="share.js"></script>
+</body>
+</html>
