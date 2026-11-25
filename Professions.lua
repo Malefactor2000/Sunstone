@@ -24,6 +24,7 @@ P.LIST = { -- name, icon, what kind, a line about it
 }
 P.MODES = { -- key, label, what the page shows
   { "over", "Overview", "Your skill, the next rank, trainers" },
+  { "forever", "Forever", "Camp objects and everything new in Forever, by skill" },
   { "skill", "Skill up", "What to make next to raise it" },
   { "gear", "Gear for you", "What it makes that you could wear" },
   { "all", "All recipes", "Every recipe by skill" },
@@ -193,6 +194,7 @@ local function Overview(prof, info, rows)
   elseif rank then
     rows[#rows + 1] = { t = "You've learned every rank" }
   end
+  if P.ForeverRows then P.ForeverRows(prof, rows, true) end
   local alts = E.AltsWith(prof)
   if #alts > 0 then
     rows[#rows + 1] = { h = "Your other characters" }
@@ -366,10 +368,102 @@ local function AllRecipes(prof, info, rows)
   end
 end
 
+---------------------------------------------------------------------------
+-- What Forever added: the camp objects, and every new recipe by skill, with where its pattern comes from
+---------------------------------------------------------------------------
+function P.IsNew(r) return (r.s or 0) > 60000 or (r.i or 0) > 60000 end
+local function NewOnes(prof)
+  local out = {}
+  if not E.Data().recipes[prof] then return out end
+  for _, r in ipairs(Recipes(prof)) do if P.IsNew(r) and r.cat ~= "Camping" then out[#out + 1] = r end end
+  table.sort(out, function(a, b) if (a.k or 0) ~= (b.k or 0) then return (a.k or 0) < (b.k or 0) end return a.n < b.n end)
+  return out
+end
+P.NewOnes = NewOnes
+-- "Pattern: sold by Xizzer, Ironforge 43.6, 29.0" / "Pattern drops from ..." / "A trainer teaches it"
+local function HowText(r)
+  local ok, src = pcall(E.RecipeSources, r)
+  local s = ok and src and src[1]
+  local from = P.From(r)
+  local head = r.ri and "Pattern: " or ""
+  if s and s.label then
+    local where = type(s.d) == "string" and s.d:match("^[^\n]+") or nil
+    return head .. s.label .. (where and where ~= "" and (", " .. where) or "")
+  end
+  return head .. (P.FromText and P.FromText(r) or from)
+end
+P.HowText = HowText
+local function NewRow(r, rank)
+  local c = P.Color(r, rank)
+  local row = RecipeRow(r, string.format("%s %s%s%s\n%s", r.prof, r.k or "?", c and (", " .. c .. " for you") or "", P.Known(r) and ", you know it" or "", HowText(r)))
+  row.ring = P.Known(r) and "good" or nil
+  row.dim = rank and rank < (r.k or 0) or nil
+  row.key = "new" .. tostring(r.s)
+  return row
+end
+local function NewPage(prof, title, list)
+  local rows, rank = {}, E.Skill(prof)
+  for k = 1, math.min(#list, 120) do rows[k] = NewRow(list[k], rank) end
+  if #list > 120 then rows[#rows + 1] = { t = string.format("%d more", #list - 120), still = true, dim = true } end
+  if #rows == 0 then rows[1] = { t = "None", still = true } end
+  return { title = title, rows = rows, sub = "New in Forever. Click one for its materials and every way to learn it." }
+end
+function P.ForeverRows(prof, rows, short)
+  local QF = NS.QuestFind
+  local rank = E.Skill(prof)
+  local camp = QF and QF.CampRows and QF.CampRows(prof) or {}
+  if #camp > 0 then
+    rows[#rows + 1] = { h = "For your campsite" }
+    for _, r in ipairs(camp) do rows[#rows + 1] = r end
+    if not short then rows[#rows + 1] = { t = "Everything for your campsite", d = "The campfire, the bedroll and every profession's objects", tex = I .. "Spell_Fire_Fire", key = "qkcamp", page = QF.CampPage } end
+  end
+  local list = NewOnes(prof)
+  if #list == 0 then return rows end
+  rows[#rows + 1] = { h = string.format("New in Forever: %d recipes", #list) }
+  if short then
+    rows[#rows + 1] = { t = string.format("%d recipes new in Forever", #list), d = "By skill and by kind, with where each pattern comes from", tex = I .. "INV_Scroll_03", key = "newall", page = function()
+      local r = {}
+      P.ForeverRows(prof, r)
+      return { title = prof .. ": Forever", rows = r, sub = "Camp objects and everything new in Forever" }
+    end }
+    return rows
+  end
+  if rank then
+    local near = {}
+    for _, r in ipairs(list) do if not P.Known(r) and (r.k or 0) >= rank - 20 and (r.k or 0) <= rank + 30 then near[#near + 1] = r end end
+    if #near > 0 then
+      rows[#rows + 1] = { t = string.format("Around your skill (%d)", rank), d = string.format("%d you don't know yet", #near), hot = true, tex = I .. "INV_Scroll_03", key = "newnear", page = function() return NewPage(prof, prof .. " around " .. rank, near) end }
+    end
+  end
+  for lo = 0, 275, 25 do
+    local hi = lo == 275 and 300 or lo + 24
+    local part, known = {}, 0
+    for _, r in ipairs(list) do if (r.k or 0) >= lo and (r.k or 0) <= hi then part[#part + 1] = r if P.Known(r) then known = known + 1 end end end
+    if #part > 0 then
+      rows[#rows + 1] = { t = string.format("Skill %d-%d", math.max(1, lo), hi), d = string.format("%d new%s", #part, known > 0 and (", you know " .. known) or ""), hot = rank and rank >= lo and rank <= hi or nil, key = "newband" .. lo,
+                          page = function() return NewPage(prof, string.format("%s %d-%d", prof, math.max(1, lo), hi), part) end }
+    end
+  end
+  local kinds, order = {}, {}
+  for _, r in ipairs(list) do
+    local c = r.cat or "Other"
+    if not kinds[c] then kinds[c] = {} order[#order + 1] = c end
+    table.insert(kinds[c], r)
+  end
+  table.sort(order)
+  rows[#rows + 1] = { h = "By kind" }
+  for _, c in ipairs(order) do
+    local l = kinds[c]
+    rows[#rows + 1] = { t = c, d = string.format("%d, skill %s to %s", #l, l[1].k or "?", l[#l].k or "?"), i = l[1].i, key = "newkind" .. c, page = function() return NewPage(prof, prof .. ": " .. c, l) end }
+  end
+  return rows
+end
+
 function P.Page(info)
   local prof = info[1]
   local rows, mode = {}, P.Mode()[1]
   if mode == "skill" then SkillUp(prof, info, rows)
+  elseif mode == "forever" then P.ForeverRows(prof, rows)
   elseif mode == "gear" then GearFor(prof, info, rows)
   elseif mode == "all" then AllRecipes(prof, info, rows)
   elseif mode == "plan" then NS.Crafts.PlanRows(prof, info, rows)

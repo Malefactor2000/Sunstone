@@ -636,6 +636,13 @@ local function ItemPage(id, row)
     rows[#rows + 1] = { h = "What it takes" }
     for _, s in ipairs(row.s) do rows[#rows + 1] = { t = s } end
   end
+  if NS.Places and NS.Places.ItemExtra then -- quests, chests, what wants it, what it's worth
+    local ok2, extra = pcall(NS.Places.ItemExtra, id)
+    if not ok2 then NS.Error("item page", extra) end
+    local quests = {}
+    for _, r in ipairs(rows) do if type(r.t) == "string" then quests[r.t] = true end end
+    for _, r in ipairs(ok2 and extra or {}) do rows[#rows + 1] = r end
+  end
   if NS.CharSheet then -- gear: what it would change
     local link = select(2, NS.GetItemInfo(id))
     local more = link and NS.CharSheet.ItemRows(link)
@@ -1494,7 +1501,16 @@ end
 
 function W.Search(text)
   if not frame then Build() end
+  W.searchText = text
+  if NS.Places and not NS.Places.Ready() then -- (a few seconds the first time: then it looks again by itself)
+    NS.Places.Build(function() if W.tab == "search" and W.searchText then W.Search(W.searchText) end end)
+  elseif NS.QuestFind and not NS.QuestFind.Ready() then
+    NS.QuestFind.Build(function() if W.tab == "search" and W.searchText then W.Search(W.searchText) end end)
+  end
   W.searchRows = NS.Travel and NS.Travel.Search(text) or {}
+  if NS.Places and not (NS.Places.Ready() and NS.QuestFind and NS.QuestFind.Ready()) then
+    table.insert(W.searchRows, { t = "Still reading everything...", d = "A few seconds the first time; more shows up by itself.", still = true, dim = true, key = "sreading" })
+  end
   W.tab = "search"
   frame:Show()
   W.Refresh()

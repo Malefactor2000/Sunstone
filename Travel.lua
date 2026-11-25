@@ -499,12 +499,13 @@ function T.Search(text)
   end
   if q == "" then return { { t = "Type a place or a service", d = "e.g. Thousand Needles, Ratchet, Wailing Caverns, bank, innkeeper, flight master, warlock trainer" } } end
   local code, label = FindService(q)
-  if code then return T.Nearest(code, label) end
   local also = NS.Places and NS.Places.Elsewhere(q) or {}
+  local sure = NS.Places and NS.Places.best or 99 -- how well the rest of Sunstone answers it (0: called just that)
   local function With(rows) -- what else goes by that name
     for _, r in ipairs(also) do rows[#rows + 1] = r end
     return rows
   end
+  if code then return With(T.Nearest(code, label)) end
   local found = NS.Places and NS.Places.Find(q) or {}
   local best = found[1]
   local function Other(rows, from)
@@ -514,28 +515,43 @@ function T.Search(text)
       if f.x and f.kind ~= "dungeon" then
         if n == 0 then rows[#rows + 1] = { h = "Places like that" } end
         n = n + 1
-        rows[#rows + 1] = { t = f.name .. ", " .. MapName(f.m), d = string.format("%.1f, %.1f", f.x, f.y), m = f.m, x = f.x / 100, y = f.y / 100 }
+        local row = NS.Places.PlaceRow(f.name .. ", " .. MapName(f.m), f.m, f.x, f.y, string.format("%.1f, %.1f", f.x, f.y), "spl" .. k)
+        rows[#rows + 1] = row
       end
     end
     return rows
   end
   local function Way(f)
-    if f.kind == "zone" then return T.Directions({ kind = "zone", m = f.m, name = f.name }) end
-    return T.Directions({ kind = "point", m = f.m, x = f.x, y = f.y, name = f.name })
+    if f.kind == "zone" then
+      local rows = T.Directions({ kind = "zone", m = f.m, name = f.name })
+      local here = T.Here and T.Here()
+      if not (here and here.m == f.m) then table.insert(rows, 1, NS.Places.PlaceRow(f.name, f.m, 50, 50, "Zone", "splz")) end
+      return rows
+    end
+    local rows = T.Directions({ kind = "point", m = f.m, x = f.x, y = f.y, name = f.name })
+    table.insert(rows, 1, NS.Places.PlaceRow(f.name, f.m, f.x, f.y, string.format("%s %.1f, %.1f", MapName(f.m), f.x, f.y), "splp"))
+    return rows
   end
-  if best and best.kind ~= "dungeon" and best.score <= 1 and not SHORT[q] then return With(Other(Way(best), 2)) end
+  if best and best.kind ~= "dungeon" and best.score <= 1 and best.score <= sure and not SHORT[q] then return With(Other(Way(best), 2)) end
   local dg = FindDungeon(q)
   if dg then
     local rows = T.Directions({ kind = "point", m = dg.m, x = dg.x, y = dg.y, name = dg.name .. " (entrance)" })
     if dg.lvl > 0 then table.insert(rows, 2, { t = dg.name .. ": recommended from about level " .. dg.lvl }) end
     return With(rows)
   end
-  if best and best.score < 10 and best.kind ~= "dungeon" then return With(Other(Way(best), 2)) end
+  if best and best.score < 10 and best.kind ~= "dungeon" then
+    if sure < best.score then -- something is called just that: it first, the place after
+      local rows = also
+      for _, r in ipairs(Other(Way(best), 2)) do rows[#rows + 1] = r end
+      return rows
+    end
+    return With(Other(Way(best), 2))
+  end
   local town = FindTown(q)
   if town then return With(T.Directions(town)) end
   local zm = FindZone(q)
   if zm then return With(T.Directions({ kind = "zone", m = zm, name = MapName(zm) })) end
-  if #also > 0 and not (also[1].h or ""):find("close to", 1, true) then return also end
+  if #also > 0 and sure < 10 then return also end
   if best then -- a letter or two off
     local rows = Way(best)
     table.insert(rows, 1, { t = "Closest name: " .. best.name, d = "Nothing is spelled \"" .. NS.Clean(text, 40) .. "\".", still = true })

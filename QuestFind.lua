@@ -716,6 +716,28 @@ function QF.ObjectPage(o)
   return { title = o[4], icon = NS.ItemIcon(item), rows = rows, sub = string.format("Camp object  ·  %s, %s tier", o[1], TIER[o[2]]) }
 end
 
+QF.ObjectItem, QF.ObjectState = ObjectItem, ObjectState
+-- the camp objects of a profession, as rows
+function QF.CampRows(prof)
+  local rows = {}
+  local rank = E.Skill(prof)
+  for _, o in ipairs(List(Camp() and Camp().objects)) do
+    if o[1] == prof then
+      local ok = ObjectState(o)
+      local how
+      if o.from then
+        local l = {}
+        for _, f in ipairs(o.from) do l[#l + 1] = f[1] .. ", " .. f[2] end
+        how = "Blueprint drops from " .. table.concat(l, " or ")
+      elseif prof == "Cooking" then how = "Taught by trainers from the start"
+      else how = "Camping 101, or a trainer at " .. o[5] end
+      rows[#rows + 1] = { t = o[4] .. "  |cff" .. NS.HEX.dim .. "skill " .. o[5] .. "|r" .. (E.Have(ObjectItem(o)) > 0 and "  |cff" .. NS.HEX.good .. "you have one|r" or ""), i = ObjectItem(o), key = "qco" .. o[3],
+                          ring = ok and "good" or nil, dim = not rank or nil, d = o[6] .. ".\n" .. how .. ".", page = function() return QF.ObjectPage(o) end }
+    end
+  end
+  return rows
+end
+
 function QF.BannerPage()
   local b = Camp().banner
   local rows, pins = { { t = b.what, i = b.item, still = true }, { t = b.note, still = true, dim = true } }, {}
@@ -978,6 +1000,30 @@ function QF.Rows()
     rows[#rows + 1] = { t = "No quest found", d = "Try part of a word. Rewards of Forever's own quests are mostly not recorded yet.", still = true, key = "qfnone" }
   end
   return rows
+end
+
+-- for the main search box: the same, shorter, without its own heading
+function QF.For(text)
+  if not QF.Ready() then QF.Build() end
+  local was = QF.find
+  QF.find = NS.Clean(text or "", 40)
+  local ok, rows = pcall(QF.Rows)
+  QF.find = was
+  local out, n = {}, 0
+  for _, r in ipairs(ok and rows or {}) do
+    if r.h then n = 0 out[#out + 1] = r
+    elseif r.key ~= "qfhead" and r.key ~= "qfnone" and not (r.still and r.key and r.key:find("^qfmore")) then
+      n = n + 1
+      if n <= 6 then out[#out + 1] = r elseif n == 7 then out[#out + 1] = { t = "More on the Quests tab", d = "Search there for the rest.", still = true, dim = true, key = "qfm" .. #out, actLabel = "Open", act = function() QF.Open(text) end } end
+    end
+  end
+  while out[#out] and out[#out].h do table.remove(out) end
+  return out
+end
+function QF.GivenBy(item)
+  if not ix then QF.Build() return {} end
+  for _, e in ipairs(ix.items) do if e.id == item then return e.q end end
+  return {}
 end
 
 -- opening it from anywhere (/sun quest name)

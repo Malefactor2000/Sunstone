@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.5.5
+- The search box searches everything Sunstone knows: items, quests (by name, by what they give or teach, by who gives them), creatures and people, things in the world, dungeons and bosses, factions, recipes, sets, enchants, pets, mounts, beasts, your spells, classes, professions, Library Books, the Guide and the settings. Words in any order, part of a word, a letter or two off.
+- An item's page now has everything about it: quests that give it or need it, where it drops, chests and crates, vendors, recipes, what it's made into, what it's worth and whether to sell it.
+- Forever's own things have their own places: every profession has a Forever page (its camp objects, and every new recipe by skill and by kind, with where the pattern comes from), the Guide has a Campsite page (campfire, Cozy Sleeping Bag, Scarlet Banner, camp objects) and all of Forever's big features one click away.
+- Places, people and things have "Show the way": the arrow, the trail and the route on the map.
+
 ## 2.5.4
 - The search box finds every named place in the game (over 700 of them, towns and camps included) and forgives a letter or two. It also finds factions, dungeons, quests, recipes, items, pets and mounts by name.
 - Sold something you need? Sunstone tells you at once, across the top of the screen and in chat, while it's still under the vendor's Buyback tab: quest items, materials your professions use, upgrades, rare finds, things worth far more at the Auction House, and anything you mark Keep (Gold, Your bags). It can be switched off in Settings.

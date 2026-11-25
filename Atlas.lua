@@ -696,6 +696,17 @@ function At.FitRoute()
   if not l then return end
   At.Glide((l + r) / 2, (t + b) / 2, max(1, min(45, 0.82 / max(r - l, b - t, 0.012))))
 end
+-- you and a place, both in view (the way there)
+function At.FitTo(m, x, y)
+  local u, v = At.Spot(m, x, y)
+  if not u or not WorldMapFrame or not WorldMapFrame:IsShown() or not At.Show(WorldMapFrame.GetMapID and WorldMapFrame:GetMapID() or m) and not At.Show(m) then return false end
+  local hbd = NS.HBD()
+  local pu, pv
+  if hbd then pu, pv = At.Point(hbd:GetPlayerWorldPosition()) end
+  if not pu then At.Glide(u, v, 30, 0.9) return true end
+  At.Glide((u + pu) / 2, (v + pv) / 2, max(1, min(40, 0.72 / max(abs(u - pu), abs(v - pv), 0.012))), 0.9)
+  return true
+end
 -- Opens the map on a place and zooms into it (the route's stops, from Sunstone's window)
 function At.Focus(m, x, y, zoom)
   local u, v = At.Spot(m, x, y)

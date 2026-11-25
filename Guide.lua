@@ -11,6 +11,7 @@ local I = "Interface\\Icons\\"
 Gd.MODES = {
   { "now", "What now?", "For your character, right now" },
   { "retail", "From Retail", "What's different here" },
+  { "camp", "Campsite", "Campfire, bedroll and camp objects" },
   { "systems", "Forever's systems", "Legacy, campsites and more" },
   { "who", "Class & race", "Who can be what" },
   { "stats", "Stats", "What each does for you" },
@@ -369,12 +370,65 @@ function Gd.FindLegacy(again)
 end
 function Gd.Legacy()
   local ok, c = false, nil
-  if legacy then ok, c = pcall(C_CurrencyInfo.GetCurrencyInfo, legacy) end
+  if legacy and C_CurrencyInfo then ok, c = pcall(C_CurrencyInfo.GetCurrencyInfo, legacy) end
   if ok and type(c) == "table" and type(c.quantity) == "number" then return c.name, c.quantity, type(c.maxQuantity) == "number" and c.maxQuantity > 0 and c.maxQuantity or nil end
+end
+
+-- the campsite: the bedroll, the banner, and what each profession can put around the fire (yours first)
+local function Campsite()
+  local QF, camp = NS.QuestFind, type(_G.SunstoneCamp) == "table" and SunstoneCamp or nil
+  local rows = {}
+  if not (QF and camp and QF.CampRows) then return { { t = "CampData.lua is missing: install the addon again.", still = true } } end
+  if not QF.Ready() then QF.Build(function() if NS.Window and NS.Window.tab == "guide" then NS.Window.Refresh() end end) end
+  rows[#rows + 1] = { t = "Your campsite", d = "How it works, what to do first, and everything for it", tex = I .. "Spell_Fire_Fire", key = "gccamp", page = QF.CampPage }
+  rows[#rows + 1] = { t = "Cozy Sleeping Bag", i = camp.bag.item, d = camp.bag.what:match("^[^%.]+%.") .. "\nA chain of 6 quests from level 14, step by step", key = "gcbag", page = function() return QF.Page(camp.bag.last) end }
+  rows[#rows + 1] = { t = camp.banner.name, i = camp.banner.item, d = camp.banner.what, key = "gcban", page = QF.BannerPage }
+  local profs, has = {}, {}
+  for _, o in ipairs(camp.objects) do if not has[o[1]] then has[o[1]] = true profs[#profs + 1] = { o[1], E.Skill(o[1]) and 0 or 1 } end end
+  table.sort(profs, function(a, b) if a[2] ~= b[2] then return a[2] < b[2] end return a[1] < b[1] end)
+  for _, p in ipairs(profs) do
+    local rank = E.Skill(p[1])
+    local list = QF.CampRows(p[1])
+    local any
+    for _, r in ipairs(list) do
+      if Hit(p[1]) or Hit(r.t, r.d) then
+        if not any then any = true rows[#rows + 1] = { h = p[1] .. (rank and ("  (you have " .. rank .. ")") or "") } end
+        rows[#rows + 1] = r
+      end
+    end
+  end
+  return rows
+end
+
+-- Forever's own features, each one click from its place in Sunstone
+local function Features(rows)
+  local QF = NS.QuestFind
+  local function Open(t, d, tex, tab, key, value)
+    if Hit(t, d) then
+      rows[#rows + 1] = { t = t, d = d, tex = I .. tex, still = true, key = "ft" .. t, actLabel = "Open", act = function()
+        if key then NS.cdb[key] = value end
+        NS.Window.Open(tab)
+      end }
+    end
+  end
+  local n0 = #rows
+  rows[#rows + 1] = { h = "Forever's big features" }
+  Open("Campsites", "The campfire, camp objects for every profession", "Spell_Fire_Fire", "guide", "guideMode", "camp")
+  if QF and Hit("Cozy Sleeping Bag", "bedroll") and type(_G.SunstoneCamp) == "table" then
+    rows[#rows + 1] = { t = "Cozy Sleeping Bag", i = SunstoneCamp.bag.item, d = "The bedroll's whole chain, step by step", key = "ftbag", page = function() return QF.Page(SunstoneCamp.bag.last) end }
+  end
+  Open("New recipes", "Everything professions make that's new, and where each pattern comes from", "INV_Scroll_03", "prof", "profMode", "forever")
+  Open("Library Books", "Books around the world; 10, 20 and 25 of them pay", "INV_Misc_Book_09", "factions", "factionMode", "books")
+  Open("Honor and ranks", "PvP gear and ranks", "INV_BannerPVP_02", "factions", "factionMode", "honor")
+  Open("New dungeons and raids", "Marked new in the list", "INV_Misc_Head_Dragon_01", "dungeons")
+  Open("Companion pets and mounts", "What you have, what's missing, and what nobody has found yet", "INV_Box_PetCarrier_01", "collect")
+  if #rows == n0 + 1 then table.remove(rows) end
 end
 
 local function Systems()
   local rows = {}
+  Features(rows)
+  if #rows > 0 then rows[#rows + 1] = { h = "How they work" } end
   Gd.FindLegacy()
   local ln, lq, lm = Gd.Legacy()
   for k, sy in ipairs(List(Src().systems)) do
@@ -494,6 +548,7 @@ function Gd.Rows()
   local m = Gd.Mode()[1]
   if m == "set" then return Settings() end
   if m == "share" and NS.Share then return NS.Share.Rows() end
+  if m == "camp" then return Campsite() end
   if m == "retail" then return Retail() elseif m == "systems" then return Systems() elseif m == "who" then return Who() elseif m == "stats" then return Stats() end
   return Gd.Now()
 end

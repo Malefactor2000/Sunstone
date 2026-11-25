@@ -40,6 +40,10 @@ local camp -- camp objects, by the recipes that make them, and campfire kits
 function S.Camp(id)
   if not camp then
     camp = {}
+    local C = type(_G.SunstoneCamp) == "table" and SunstoneCamp or {}
+    if C.bag then camp[C.bag.item] = true end
+    if C.banner then camp[C.banner.item] = true end
+    for _, o in ipairs(List(C.objects)) do if type(o[3]) == "number" then camp[o[3]] = true end end
     for _, list in pairs(E.Data().recipes or {}) do
       for _, r in ipairs(list) do if r.i and (r.cat == "Camping" or (r.n or ""):find("Campfire Kit", 1, true)) then camp[r.i] = true end end
     end
