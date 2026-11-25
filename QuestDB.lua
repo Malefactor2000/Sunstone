@@ -58,12 +58,11 @@ end
 local continents
 local function Continent(inst)
   if not continents then
-    continents = {}
+    continents = { [0] = 1415, [1] = 1414 } -- (the flight masters' maps are "continents" too, 1463 and 1464: those know no zones)
     local hbd = NS.HBD()
     for m, d in pairs(hbd and hbd.mapData or {}) do
-      if type(d) == "table" and d.mapType == 2 and d.instance and not continents[d.instance] then continents[d.instance] = m end
+      if type(d) == "table" and d.mapType == 2 and d.instance and not continents[d.instance] and m ~= 1463 and m ~= 1464 then continents[d.instance] = m end
     end
-    continents[0], continents[1] = continents[0] or 1415, continents[1] or 1414
   end
   return continents[inst]
 end

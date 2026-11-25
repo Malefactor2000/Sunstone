@@ -1,7 +1,7 @@
 # Changelog
 
-## 2.5.1
-First public release.
+## 2.5.2
+First public release (beta).
 
 - The world map is one smooth sheet: the wheel zooms from the whole world into a camp, dragging moves it, in the game's own parchment style with the land you've explored drawn in. Your route and its stops, quests, flight masters, boats and dungeon doors are on it, and every stop in the route list has a Zoom in button.
 - The route's lines are drawn over the explored land, through every zone on the way; show the whole route, just the next stop, or nothing. "Where I've been" draws the way you came when you want to retrace your steps.

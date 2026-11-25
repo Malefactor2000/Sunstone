@@ -63,10 +63,12 @@ local S, vw, vh = 1, W, H
 local dirty = true
 At.view = view
 
-local function Clamp() -- (the world fits at zoom 1; a continent's own map reaches past the world map's edges)
+local function Clamp() -- (the world fits at zoom 1; a continent's own map reaches past the world map's left or right edge, never past its top or bottom)
   local free = max(0, min(1, (view.z - 1) / 0.18))
-  view.x = max(0.5 - 0.42 * free, min(0.5 + 0.42 * free, view.x))
-  view.y = max(0.5 - 0.42 * free, min(0.5 + 0.42 * free, view.y))
+  local hw, hh = vw / (2 * W * S * view.z), vh / (2 * H * S * view.z)
+  local x0, x1 = 0.5 + (hw - 0.186 - 0.5) * free, 0.5 + (1.159 - hw - 0.5) * free
+  view.x = x0 < x1 and max(x0, min(x1, view.x)) or 0.5
+  view.y = hh < 0.5 and max(hh, min(1 - hh, view.y)) or 0.5
 end
 local function Cursor() -- the pointer, from the middle of the window (its own units; up is negative)
   local x, y = GetCursorPosition()
@@ -121,12 +123,12 @@ local function Tiles(sheet, m) -- the map's own picture, without anything on it
   end
   return true
 end
-local function Cut(sheet, zone)
+local function Cut(sheet, zone, file)
   local l, t, r, b = At.Rect(zone)
   if not (sheet.CreateMaskTexture and l) then return nil end
   local ok, m = pcall(sheet.CreateMaskTexture, sheet)
   if not ok or not m then return nil end
-  m:SetTexture(NS.MEDIA .. "zones\\z" .. zone .. ".png", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+  m:SetTexture(NS.MEDIA .. (file or "zones\\z" .. zone .. ".png"), "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
   m:SetPoint("TOPLEFT", sheet, "TOPLEFT", l * W, -t * H)
   m:SetSize((r - l) * W, (b - t) * H)
   sheet.cut = m
@@ -369,9 +371,15 @@ local function Pins()
     local c = d.color or GOLD
     Put({ t = d.t, lines = d.lines, m = d.m, x = d.x / 100, y = d.y / 100, right = d.right, rightText = d.rightText }, u, v, (d.size or 16) + 1, c, NS.MEDIA .. "pin_" .. d.glyph .. ".png", nil, 3)
   end
-  -- quests
+  -- quests (not where a stop of the route stands: its number would be under the mark)
+  local at = {}
+  for _, s in ipairs(List(NS.cdb.route and NS.cdb.route.enabled and NS.Route and NS.Route.stops)) do
+    local u, v = At.Point(s.wx, s.wy, s.inst)
+    if u then at[#at + 1] = { u, v } end
+  end
   for _, d in ipairs(List(questItems)) do
     local u, v = At.Spot(d.m, d.x, d.y)
+    for _, s in ipairs(at) do if u and abs(s[1] - u) < 0.0006 and abs(s[2] - v) < 0.0009 then u = nil end end
     Put({ t = d.t, lines = d.lines, m = d.m, x = d.x, y = d.y }, u, v, min(18, d.size), d.c or YELLOW, NS.MEDIA .. "pin_" .. d.glyph .. ".png", nil, 6)
   end
   -- your stars
@@ -569,6 +577,7 @@ local function Make()
   for m in pairs(CONTS) do
     lay.conts[m] = Sheet(plane, base + 3)
     lay.conts[m].a = 0
+    Cut(lay.conts[m], m, m == 1414 and "softr.png" or "softl.png") -- (fading into the world's sea toward the other continent)
     Tiles(lay.conts[m], m)
   end
   lay.shadeOn = Sheet(plane, base + 4)
