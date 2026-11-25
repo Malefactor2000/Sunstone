@@ -1,6 +1,6 @@
 # Sunstone
 
-**Beta, first release.** A leveling companion for **World of Warcraft: Forever**. One window that knows your character: quest route and search, gear upgrades and spells in real numbers, a hunter pet planner, talents, professions, dungeons, gold, travel and more. Information only: it never plays for you.
+**First release.** A leveling companion for **World of Warcraft: Forever**. One window that knows your character: quest route and search, gear upgrades and spells in real numbers, a hunter pet planner, talents, professions, dungeons, gold, travel and more. Information only: it never plays for you.
 
 Named after the Viking sunstone, the crystal that finds the sun through fog.
 
