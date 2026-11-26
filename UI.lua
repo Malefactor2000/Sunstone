@@ -281,7 +281,7 @@ local function RouteRows()
   if nx then
     local s = nx.stop
     local d = string.format("%s %.1f, %.1f", nx.zone, s.x * 100, s.y * 100)
-    if s.node.kind == "obj" and s.node.quest.title then d = s.node.quest.title .. "  ·  " .. d end
+    if (s.node.kind == "obj" or s.node.kind == "travel") and s.node.quest.title then d = s.node.quest.title .. "  ·  " .. d end
     local hop = R.hop
     if hop and NS.Travel and NS.Travel.MapName then
       d = d .. string.format("\nOn the way: %s at %s %.1f, %.1f (the arrow points there first)", hop.label,
@@ -308,14 +308,17 @@ local function RouteRows()
   for i, s in ipairs(R.stops or {}) do
     local bits = {}
     if s.node.kind == "obj" or s.node.kind == "sell" then bits[1] = s.node.quest.title end
+    if s.node.kind == "travel" then bits[1] = "For " .. (s.node.quest.title or "?") .. ", on the other side" end
     local t = s.secs and s.secs >= 50 and math.floor(s.secs / 60 + 0.5)
     if t then bits[#bits + 1] = s.fly and string.format("fly part of the way, %d min", t) or string.format("%d min walk", t) end
     rows[#rows + 1] = { t = i .. ". " .. StopText(s), d = #bits > 0 and table.concat(bits, "  ·  ") or nil, m = s.m, x = s.x, y = s.y, tex = X and X.StopIcon(s) or nil, key = "stop" .. tostring(s.key) }
   end
   local other = #(R.elsewhere or {}) + #(R.unknown or {})
   if other > 0 then
+    local away = R.stops and R.stops[1] and R.stops[1].node.kind == "travel"
     rows[#rows + 1] = { t = string.format("%d more not on the route", other),
-                        d = "On another continent, or Questie has no spot for them. \"List in chat\" names them." }
+                        d = away and "On the other continent: the route takes you to the boat or zeppelin first, and picks them up once you land. \"List in chat\" names them."
+                          or "On another continent, or Questie has no spot for them. \"List in chat\" names them." }
   end
   if not nx and not R.status then
     rows[#rows + 1] = { t = "Nothing to route right now", d = "No quest objectives or turn-ins found nearby." }

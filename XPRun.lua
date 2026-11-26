@@ -297,7 +297,7 @@ end
 ---------------------------------------------------------------------------
 -- The page: the round on a map, and every stop
 ---------------------------------------------------------------------------
-X.ICON = { pickup = "Interface\\GossipFrame\\AvailableQuestIcon", turnin = "Interface\\GossipFrame\\ActiveQuestIcon", sell = I .. "INV_Misc_Coin_01", corpse = I .. "INV_Misc_Bone_HumanSkull_01" }
+X.ICON = { pickup = "Interface\\GossipFrame\\AvailableQuestIcon", turnin = "Interface\\GossipFrame\\ActiveQuestIcon", sell = I .. "INV_Misc_Coin_01", travel = I .. "INV_Misc_Map_01", corpse = I .. "INV_Misc_Bone_HumanSkull_01" }
 function X.StopIcon(s)
   local k = s.node.kind
   if X.ICON[k] then return X.ICON[k] end

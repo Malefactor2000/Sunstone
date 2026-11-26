@@ -376,6 +376,31 @@ function T.NextHop(here, p)
   return hop or nil
 end
 
+-- A spot on another continent: the boat, zeppelin or airship stop where the way there leaves this one (whether or not
+-- you've been there: docks are always on the map). { m, x, y (0-100), wx, wy, inst, label }, or nil.
+local dockCache = {}
+function T.Dock(here, p)
+  if not (here and here.m and here.wx and p and p.m) then return nil end
+  local key = string.format("%d:%d,%d>%d:%.0f,%.0f", here.m, math.floor((here.x or 0) / 10), math.floor((here.y or 0) / 10), p.m, p.x, p.y)
+  if dockCache[key] ~= nil then return dockCache[key] or nil end
+  local node = { m = p.m, x = p.x, y = p.y }
+  node.wx, node.wy, node.inst = World(p.m, p.x, p.y)
+  local dock = false
+  if node.wx then
+    local path = Route(here, { kind = "point", node = node, name = "" }, { walk = true })
+    for _, s in ipairs(path or {}) do
+      -- (the ride that leaves this land: a tram between two cities doesn't count)
+      if s.how:sub(1, 5) == "ride:" and s.from.inst == here.inst and s.node.inst ~= here.inst then
+        local a = s.from
+        dock = { m = a.m, x = a.x, y = a.y, wx = a.wx, wy = a.wy, inst = a.inst, label = "Take the " .. (a.label or "boat") .. " to " .. s.how:sub(6) }
+        break
+      end
+    end
+  end
+  dockCache[key] = dock
+  return dock or nil
+end
+
 -- For the route line on the world map: every crossing point (both sides of each border, or each boat stop) on the
 -- walking route from a to b, so a leg into another zone bends through the passes. {} within one zone.
 local hopsCache = {}

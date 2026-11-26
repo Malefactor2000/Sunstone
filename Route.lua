@@ -982,6 +982,37 @@ local function CheckBags()
   return free
 end
 
+-- Not on this continent (listed as elsewhere, with a spot kept so the route can lead to the boat or zeppelin), or
+-- nowhere known at all
+local function Away(elsewhere, unknown, pts, title, label)
+  local list = (#pts > 0) and elsewhere or unknown
+  list[#list + 1] = (title or "?") .. ": " .. label
+  if #pts > 0 then
+    elsewhere.spots = elsewhere.spots or {}
+    local sp = elsewhere.spots
+    sp[#sp + 1] = { p = pts[1], title = title }
+  end
+end
+
+-- Nothing left to do on this continent but something to do on another: a stop at the boat, zeppelin or airship
+-- that goes there (where the walking route leaves this land), so the arrow and the map line lead to the dock.
+local function TravelNode(nodes, elsewhere)
+  for _, nd in ipairs(nodes) do if nd.kind ~= "sell" then return nil end end
+  local T = NS.Travel
+  local spots = elsewhere.spots
+  if not (spots and #spots > 0 and T and T.Dock and T.Here) or (UnitIsGhost and UnitIsGhost("player")) then return nil end
+  local here = T.Here()
+  if not here then return nil end
+  for k = 1, math.min(#spots, 6) do
+    local sp = spots[k]
+    local ok, dock = pcall(T.Dock, here, { m = sp.p.m, x = sp.p.x * 100, y = sp.p.y * 100 })
+    if ok and dock then
+      return { kind = "travel", quest = { title = sp.title or "?" }, label = dock.label, key = "travel", deps = {}, ready = true, work = 0, hold = 0,
+               cands = { { wx = dock.wx, wy = dock.wy, inst = dock.inst, m = dock.m, x = dock.x / 100, y = dock.y / 100, n = 1 } } }
+    end
+  end
+end
+
 -- A quest that isn't in the log yet: a stop at whoever gives it
 local function PickupNode(qid, here, elsewhere, unknown)
   local st = QDB.Get(qid, "startedBy")
@@ -995,8 +1026,7 @@ local function PickupNode(qid, here, elsewhere, unknown)
   if #cands > 0 then
     return { kind = "pickup", quest = { id = qid, title = title }, label = "Pick up", cands = cands, key = qid .. ":pickup", deps = {} }
   end
-  local list = (#pts > 0) and elsewhere or unknown
-  list[#list + 1] = title .. ": pick up"
+  Away(elsewhere, unknown, pts, title, "pick up")
 end
 
 -- A quest that isn't in the log yet, whole: pick it up, do it, hand it in (each after the one before). false = not all of its places are known
@@ -1029,8 +1059,7 @@ function R.QuestNodes(qid, here, nodes, elsewhere, unknown, free)
     local cands = Candidates(pts, here)
     if #cands == 0 then
       whole = false
-      local list = (#pts > 0) and elsewhere or unknown
-      list[#list + 1] = q.title .. ": " .. label
+      Away(elsewhere, unknown, pts, q.title, label)
       return
     end
     local work, n = Work(o, e)
@@ -1063,8 +1092,7 @@ function R.QuestNodes(qid, here, nodes, elsewhere, unknown, free)
   end
   local cands = Candidates(pts, here)
   if #cands == 0 then
-    local list = (#pts > 0) and elsewhere or unknown
-    list[#list + 1] = q.title .. ": turn in"
+    Away(elsewhere, unknown, pts, q.title, "turn in")
     return false
   end
   local node = { kind = "turnin", quest = q, label = "Turn in", cands = cands, key = qid .. ":turnin", deps = #deps > 0 and deps or { first }, ready = false }
@@ -1121,8 +1149,7 @@ function R.BuildNodes(here)
               objNodes[#objNodes + 1] = #nodes
             else
               blocked = true
-              local list = (#pts > 0) and elsewhere or unknown
-              list[#list + 1] = q.title .. ": " .. label
+              Away(elsewhere, unknown, pts, q.title, label)
             end
           end
         end
@@ -1145,8 +1172,7 @@ function R.BuildNodes(here)
           Values(q, lists, node, free)
           nodes[#nodes + 1] = node
         else
-          local list = (#pts > 0) and elsewhere or unknown
-          list[#list + 1] = q.title .. ": turn in"
+          Away(elsewhere, unknown, pts, q.title, "turn in")
         end
       end
     end
@@ -1157,6 +1183,8 @@ function R.BuildNodes(here)
       local nd = PickupNode(focus, here, elsewhere, unknown)
       if nd then nodes[#nodes + 1] = nd end
     end
+    local tn = TravelNode(nodes, elsewhere)
+    if tn then nodes[#nodes + 1] = tn end
     return nodes, elsewhere, unknown
   end
   if #nodes > 0 and not R.skipped.sell then
@@ -1180,6 +1208,8 @@ function R.BuildNodes(here)
     if #nodes > R.MOST then break end
     R.QuestNodes(qid, here, nodes, elsewhere, unknown, free)
   end
+  local tn = TravelNode(nodes, elsewhere)
+  if tn then nodes[#nodes + 1] = tn end
   return nodes, elsewhere, unknown
 end
 

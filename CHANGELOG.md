@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.5.6
+- Quests on the other continent: the route now takes you to the boat or zeppelin that goes there (its dock, whether or not you've been there before), with the arrow and the map line leading the way zone by zone. Once you land, it picks the quest up from there.
+
 ## 2.5.5
 - The search box searches everything Sunstone knows: items, quests (by name, by what they give or teach, by who gives them), creatures and people, things in the world, dungeons and bosses, factions, recipes, sets, enchants, pets, mounts, beasts, your spells, classes, professions, Library Books, the Guide and the settings. Words in any order, part of a word, a letter or two off.
 - An item's page now has everything about it: quests that give it or need it, where it drops, chests and crates, vendors, recipes, what it's made into, what it's worth and whether to sell it.
