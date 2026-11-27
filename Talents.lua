@@ -94,11 +94,34 @@ function NS.CustomPlan()
   if o and o.class == class and o.steps then return o end
 end
 
--- Can this character pick the goal? Only goals with a plan for the class (a Mage can't pick Tanking).
+-- The group roles each class can really fill (the player's call, 2026-11-27); every class can level.
+NS.CLASS_ROLES = {
+  WARRIOR = { tank = true, dps = true }, PALADIN = { heal = true, tank = true }, HUNTER = { dps = true },
+  ROGUE = { dps = true }, PRIEST = { heal = true }, SHAMAN = { heal = true, dps = true }, MAGE = { dps = true },
+  WARLOCK = { dps = true }, DRUID = { heal = true, tank = true, dps = true },
+}
+local GROUP_ROLE = { tank = true, heal = true, dps = true }
+
+-- Can this character pick the goal? Only goals with a plan for the class, and only roles the class can fill.
 function NS.GoalAvailable(goal)
   if goal == "custom" then return NS.CustomPlan() ~= nil end
   local _, class = UnitClass("player")
+  if GROUP_ROLE[goal] and not (NS.CLASS_ROLES[class or ""] or {})[goal] then return false end
   return NS.PlanFor(class, goal) ~= nil
+end
+
+-- The role the goal amounts to: "leveling" (Solo too), "tank", "heal" or "dps"; nil for a plan of your own
+function NS.Role(goal)
+  goal = goal or NS.TalentGoal()
+  if goal == "leveling" or goal == "solo" then return "leveling" end
+  if GROUP_ROLE[goal] then return goal end
+  if goal == "dungeons" then -- the class's main group role: what its dungeon plan is also for
+    local _, class = UnitClass("player")
+    local p = NS.PlanFor(class, "dungeons")
+    for _, g in ipairs(p and p.goals or {}) do if GROUP_ROLE[g] then return g end end
+    return "dps"
+  end
+  return nil
 end
 
 -- The goal this character picked on the Talents tab (saved per character). "custom" = the helper's plan.
@@ -109,10 +132,20 @@ function NS.TalentGoal()
   return NS.CustomPlan() and "custom" or "leveling"
 end
 
+-- Has this character picked a role (its goal) yet? Until then Sunstone goes by Leveling.
+function NS.RolePicked()
+  local g = NS.cdb and NS.cdb.talents and NS.cdb.talents.goal
+  return g ~= nil and NS.GoalAvailable(g)
+end
+
 -- Returns false (and changes nothing) when the class has no plan for the goal.
 function NS.SetTalentGoal(goal)
   if not NS.GoalAvailable(goal) then return false end
   NS.cdb.talents.goal = goal
+  -- the role picks the stat weights: score the gear again for it
+  if NS.Upgrades and NS.Upgrades.Evaluate and NS.Upgrades.evaluated and not NS.Upgrades.scanning then
+    NS.Debounce("upgradesEval", 0.3, NS.Upgrades.Evaluate)
+  end
   if NS.Window and NS.Window.Refresh then NS.Window.Refresh() end
   T.Refresh()
   return true

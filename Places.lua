@@ -464,7 +464,7 @@ function Pl.ItemExtra(id)
     Head("Quests that need it")
     for k = 1, math.min(6, #qs) do
       local x = qs[k]
-      rows[#rows + 1] = { t = E.QuestName(x.id), d = x.log and "In your log" or x.starts and "It starts this quest" or (x.level > 0 and ("From level " .. x.level) or ""), tex = I .. "INV_Misc_Note_01", key = "inq" .. x.id, page = QF and function() return QF.Page(x.id) end or nil }
+      rows[#rows + 1] = { t = E.QuestName(x.id), d = x.log and "In your log" or x.starts and "It starts this quest" or x.holiday and ((x.holiday ~= "" and ("When the " .. x.holiday .. " is on") or "While its holiday is on") .. (x.again and ", again and again" or "") .. (x.level > 0 and (", from level " .. x.level) or "")) or (x.level > 0 and ("From level " .. x.level) or ""), tex = I .. "INV_Misc_Note_01", key = "inq" .. x.id, page = QF and function() return QF.Page(x.id) end or nil }
     end
   end
   local ok2, rec = pcall(function() return Sell and Sell.Recipes(id) or {} end)

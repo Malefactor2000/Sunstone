@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.6.0
+A major update: pick your role first (Leveling, Tanking, Healing or DPS, whichever your class can fill), and your gear upgrades are scored for it. Plus an update notice in chat, routes that learn tunnels, and many fixes.
+
+- Update notice: from this version on, when a newer Sunstone is out, it tells you in chat when you log in, and how to get it: in the CurseForge app if you got Sunstone from CurseForge, from GitHub's Releases page if you got it there. Bigger updates are called a major update. Addons can't go online, so it asks the Sunstone of players in your guild, your group and its own hidden channel which version they run. Only version numbers are sent, nothing else is read, and a number from the channel only counts once two different players report it. You can switch it off in the Guide, Settings, Sharing.
+- Zephras Isle (the Skyborne island) now has routes: from the island to the airship towers for Mulgore and Dalaran, and back to the island from anywhere, so Skyborne quests get the arrow and the map line again.
+- The minimap trail works on Zephras Isle too, around its hills and cliffs. Anywhere Sunstone has no ground data for, it now shows a straight gray line instead of nothing.
+- Tunnels and winding passes (like Dun Algaz, from the Wetlands into Loch Modan): the arrow used to point back at the tunnel mouth once you were inside. Sunstone now learns the way through the first time any of your characters walks it, and from then on the arrow, the trail and the map line follow the tunnel's bends. Until then they head for the far end in a straight line. A walk that wanders about on the way (fighting, circling) isn't learned, and any learned before this are forgotten, like the loop the route took out of Thunder Bluff.
+- Darkmoon Faire turn-ins (Torn Bear Pelt, Small Furry Paw and the like) said "a quest item, but none of your quests is known to need it" while the Faire was away. They now name their Faire quest. Holiday quests only keep quest items, so cloth and food aren't hoarded for a holiday months away.
+- Quests with one start per race or town (like the shaman's Call of Fire): with one already in your log, Sunstone kept offering you the other versions to pick up. It no longer does, and the next step waits on the one you have.
+- Arra'chea (Rites of the Earthmother, Mulgore) is where Forever has it, at 48.0, 28.5. Every database had the Classic spot further northeast.
+- Forever's own hand-ins: when a quest's hand-in window asks you for items, Sunstone remembers it, and from then on those items name that quest.
+- Quests with a tricky spot (the Cozy Sleeping Bag chain's jumps on Thoradin's Wall and down at Stonewrought Dam) show their "How" note on the route's next stop too, not only on the quest's page.
+- Your role comes first: the Character page (Gear tab) now opens with "Pick your role", and it has its own row under "Your character". The choices are Leveling, Tanking, Healing or DPS, only the roles your class can really fill (druids are the only ones with all three). Gear upgrades are scored for the role you pick, and your talent plan follows it. The Talents tab offers the same roles: no Tanking for shamans, no DPS for priests or paladins.
+- Changing your role scores your gear again at once. Before, the Gear tab kept the old scores until your next level-up, quest or gear change.
+- Gear for melee and hunter builds that level or play alone: the stat weights left armor out, so a shaman was offered cloth with a point of Intellect over leather. Armor now counts (20 armor is worth about 1 attack power), so leather and mail win where they should. Healing, caster, raid and dungeon builds keep their own weights. Armor in the Upgrades lists now says cloth, leather, mail or plate.
+- Weapons your class can learn but you haven't yet (Fist Weapons for a shaman, say) are no longer mixed in with gear you can use now. They have their own heading, "Learn the weapon skill first", which names the weapon master who teaches it.
+- Flights: Sunstone used to think any two of your flight points were linked, so it could send you to fly somewhere the flight master doesn't offer (Kargath to Tarren Mill, before you know Undercity). It now remembers what each flight map you open can actually reach, and only plans those flights. Once you learn a flight point that links them, the flight comes back.
+
+## 2.5.7
+- Some items said "Keep it: it starts the quest 0." They start no quest at all: that reason is gone, and they get a normal verdict.
+
 ## 2.5.6
 - Quests on the other continent: the route now takes you to the boat or zeppelin that goes there (its dock, whether or not you've been there before), with the arrow and the map line leading the way zone by zone. Once you land, it picks the quest up from there.
 

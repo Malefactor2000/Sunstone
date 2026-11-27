@@ -42,7 +42,7 @@ so that there is a folder `AddOns\Sunstone` with `Sunstone.toc` in it. Restart t
 ## Rules it keeps
 
 * Information only: it never casts, moves, buys, sells, accepts or hands in anything.
-* It registers no chat, whisper, mail or addon message events and sends nothing by itself. Sharing finds is off unless you say Yes when it asks (once), or press Share finds at the top of its window; the addon then writes them into your own saved settings, and you send them by hand or with a separate program you choose to run.
+* It reads no chat, whispers or mail. The one thing it sends by itself is its version number: at login it asks the Sunstone of players in your guild, your group and its own hidden channel which version they run, and tells you when a newer one is out. Only numbers like 2.5.9 go out or come back; anything else is ignored. Off in the Guide, Settings, Sharing. Sharing finds is off unless you say Yes when it asks (once), or press Share finds at the top of its window; the addon then writes them into your own saved settings, and you send them by hand or with a separate program you choose to run.
 * What it records (drops, prices, quest rewards) stays in your own SavedVariables.
 
 ## Known limits

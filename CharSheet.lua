@@ -670,7 +670,7 @@ local function Info(slot) for _, x in ipairs(NS.Gear.SLOTS) do if x[1] == slot t
 local function BestNow(slot)
   local best
   for _, e in ipairs(U.all or {}) do
-    if e.src and e.src.ok and (e.reqLevel or 0) <= Level() then
+    if e.src and e.src.ok and not e.train and (e.reqLevel or 0) <= Level() then
       for _, sl in ipairs(e.slots or {}) do if sl == slot and (not best or e.gain > best.gain) then best = e end end
     end
   end
@@ -1235,10 +1235,88 @@ local function UpdateSpells(p, width)
 end
 
 ---------------------------------------------------------------------------
+-- Your role: the first thing on the page. It picks the stat weights for gear and the talent plan.
+---------------------------------------------------------------------------
+local ROLES = {
+  { "leveling", "Leveling", "Questing and playing alone on the way to 60" },
+  { "tank", "Tanking", "Holding enemies off the group" },
+  { "heal", "Healing", "Keeping the group alive" },
+  { "dps", "DPS", "Damage in groups and raids" },
+}
+local function RoleWhy()
+  local role, goal = NS.Role(), NS.TalentGoal()
+  local desc
+  for _, r in ipairs(ROLES) do if r[1] == role then desc = r[3] end end
+  if goal == "solo" or goal == "dungeons" or goal == "custom" then desc = NS.GoalLabel(goal) .. " talent plan (Talents tab)" end
+  local names, armor = U.Values()
+  local list = #names > 1 and (table.concat(names, ", ", 1, #names - 1) .. " and " .. names[#names]) or names[1]
+  local text = list and string.format("Gear is scored for it: %s count most%s.", list, armor and ", and armor counts too" or "") or ""
+  return (desc and (desc .. ". ") or "") .. text
+end
+CS.RoleWhy = RoleWhy
+function CS.Roles() -- the roles this character's class can fill, Leveling first
+  local out = {}
+  for _, r in ipairs(ROLES) do if NS.GoalAvailable(r[1]) then out[#out + 1] = r end end
+  return out
+end
+local function MakeRole(row)
+  local p = CreateFrame("Frame", nil, row)
+  p.bg = NS.Rounded(p, C.surface, "round.png", 10)
+  p.head = Lk.Text(p, "GameFontNormalLarge", C.accent)
+  p.head:SetPoint("TOPLEFT", 12, -10)
+  p.hint = Lk.Text(p, "GameFontHighlightSmall", C.dim)
+  p.hint:SetPoint("LEFT", p.head, "RIGHT", 10, 0)
+  p.buttons = {}
+  for _, r in ipairs(ROLES) do
+    local key = r[1]
+    local b = NS.Button(p, r[2], 96, function() NS.Safe("role", NS.SetTalentGoal, key) end)
+    b:SetHeight(24)
+    b.role = key
+    p.buttons[#p.buttons + 1] = b
+  end
+  p.why = Lk.Text(p, "GameFontHighlightSmall", C.text)
+  return p
+end
+local function UpdateRole(p, width)
+  local picked, role = NS.RolePicked(), NS.Role()
+  p.head:SetText(picked and "Your role" or "Pick your role")
+  p.head:SetTextColor(unpack(picked and C.accent or C.good))
+  p.hint:SetText(picked and "Change it any time." or "Sunstone works out your gear and talents for it.")
+  local x, y = 12, -36
+  for _, b in ipairs(p.buttons) do
+    local show = NS.GoalAvailable(b.role)
+    b:SetShown(show)
+    if show then
+      if x + b:GetWidth() > width - 12 then x, y = 12, y - 30 end
+      b:ClearAllPoints()
+      b:SetPoint("TOPLEFT", x, y)
+      b:SetActive(picked and b.role == role)
+      x = x + b:GetWidth() + 6
+    end
+  end
+  p.why:ClearAllPoints()
+  p.why:SetPoint("TOPLEFT", 12, y - 32)
+  p.why:SetWidth(width - 24)
+  p.why:SetText(picked and RoleWhy() or ("Until you pick one, Sunstone goes by Leveling. " .. RoleWhy()))
+  return -(y - 32) + p.why:GetStringHeight() + 12
+end
+-- The same on the Character list, right under "Your character"
+function CS.RoleRow()
+  local picked = NS.RolePicked()
+  local label
+  for _, r in ipairs(ROLES) do if r[1] == NS.Role() then label = r[2] end end
+  local _, class = UnitClass("player")
+  return { t = picked and ("Your role: " .. (label or NS.GoalLabel(NS.TalentGoal()))) or "Pick your role",
+           d = picked and RoleWhy() or "Your gear upgrades and talent plan are worked out for it. Until then: Leveling.",
+           tex = class and (I .. "ClassIcon_" .. class:sub(1, 1) .. class:sub(2):lower()) or nil, key = "role", hot = not picked or nil,
+           actLabel = picked and "Change" or "Pick", ring = not picked and "good" or nil, act = function() CS.Open() end }
+end
+
+---------------------------------------------------------------------------
 -- The page
 ---------------------------------------------------------------------------
 function CS.Page()
-  local rows = { { panel = { key = "charsheet", make = Make, update = Update } } }
+  local rows = { { panel = { key = "charrole", make = MakeRole, update = UpdateRole } }, { panel = { key = "charsheet", make = Make, update = Update } } }
   if CS.slot then rows[#rows + 1] = { panel = { key = "charpick", make = MakePick, update = UpdatePick } } end
   local s0, s1 = CS.State()
   if next(CS.plan) then
@@ -1272,7 +1350,7 @@ function CS.Open()
   for _, r in ipairs(W.current or {}) do if r.key == "charsheet" then W.Select(r) end end
 end
 function CS.Rows()
-  local rows = { CS.Row() }
+  local rows = { CS.Row(), CS.RoleRow() }
   for _, r in ipairs(NS.Gear.SlotRows()) do rows[#rows + 1] = r end
   return rows
 end

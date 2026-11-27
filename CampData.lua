@@ -59,8 +59,8 @@ tips = {
 [79008]="Wreckage at the Alexston Farmstead: click the remains. The note sends you to the southern Barrens. Alliance's way there: by road to Booty Bay, then the boat to Ratchet.",
 [79192]="Click the plank nailed up beside the second remains.",
 [79980]="The litter lies in a camp in the hills past Sun Rock Retreat; the mound of dirt is a short way further up from it.",
-[79974]="The figurine is on a ledge on the face of Stonewrought Dam: drop down to it from the top. Guards around level 30 stand near if you're Horde.",
-[79975]="From the Hillsbrad side follow Thoradin's Wall to a gap with a broken cart. Climb the cart and jump from it up onto the wall: the bag is in the walkway there.",
+[79974]="The figurine is on a ledge on the face of Stonewrought Dam: from the top, jump down by the waterfall onto it. Dam guards around level 30 stand near, hostile if you're Horde.",
+[79975]="From the Hillsbrad side follow Thoradin's Wall to a gap with a broken small cart. Two jumps have to be just right: from the cart up onto the wall, then up the wall to the walkway where the bag is. It can take a few tries.",
 [79976]="Click the rolled-up satchel next to the bag.",
 },
 -- the only camp decoration guides know: steps { text, about, map, x, y }

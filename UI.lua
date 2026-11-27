@@ -298,6 +298,9 @@ local function RouteRows()
     if #here > 0 and (s.node.kind == "turnin" or s.node.kind == "sell") then
       d = d .. "\nAlso here: " .. table.concat(here, ", ") .. (left > 0 and string.format(" and %d more", left) or "")
     elseif nx.after then d = d .. "\nThen: " .. StopText(nx.after) end
+    local q = s.node.quest
+    local tip = type(q) == "table" and q.id and s.node.kind ~= "pickup" and NS.QuestFind and NS.QuestFind.Tip and NS.QuestFind.Tip(q.id)
+    if tip then d = d .. "\nHow: " .. tip end
     if NS.Arrow and NS.Arrow.manual then
       d = d .. "\nThe arrow is pointing at a place you chose (" .. (NS.Arrow.manual.title or "?") .. "): Re-plan, or a right-click on the arrow, points it back at the route."
     end

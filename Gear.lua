@@ -67,9 +67,10 @@ function G.Changed()
   end)
 end
 
-local function Kind(e) -- "now", "random", "later", "ah" or nil (no source known)
+local function Kind(e) -- "now", "random", "later", "far", "train" (a weapon skill to learn first), "ah" or nil (no source known)
   local s, level = e.src, UnitLevel("player")
   if not s then return e.ah and "ah" or nil end
+  if e.train then return "train" end
   if (e.reqLevel or 0) > level or (s.req or 0) > level then return "later" end
   if E.Overseas(s.place) or (s.master and E.Overseas(s.master.p)) then return "far" end
   if RANDOM[s.kind] then return "random" end
@@ -83,16 +84,27 @@ local function SourceText(e, long)
   local out = s.label
   if e.train then
     local kind = NS.Upgrades.WEAPON_NAME[e.train] or "this weapon"
-    out = long and string.format("Learn %s first%s\n%s", kind, s.master and (" (" .. s.master.name .. ", " .. s.master.city .. ")") or "", out)
-      or string.format("learn %s first, %s", kind, out)
+    local who = s.master and (" (" .. s.master.name .. ", " .. s.master.city .. ")") or ""
+    out = long and string.format("Learn %s first%s\n%s", kind, who, out) or string.format("learn %s first%s. %s", kind, who, out)
   end
   if long and s.d and s.d ~= "" then out = out .. "\n" .. s.d end
   if not s.untimed and s.ok and s.mins < 400 then out = out .. (long and "\n" or ", ") .. E.Duration(s.mins) end
   return out
 end
 
+-- cloth, leather, mail or plate (cloaks are cloth for everyone: left out)
+local ARMOR_KIND = { [1] = "cloth", [2] = "leather", [3] = "mail", [4] = "plate" }
+local function ArmorKind(id)
+  local _, _, _, equipLoc, _, classID, sub = NS.GetItemInfoInstant(id)
+  if classID == 4 and equipLoc ~= "INVTYPE_CLOAK" then return ARMOR_KIND[sub] end
+end
+G.ArmorKind = ArmorKind
+local TRAIN_HEAD = "Learn the weapon skill first"
+
 local function Entry(e, long, level)
   local row = { t = string.format("%s  (%s)", e.name, Gain(e)), d = SourceText(e, long), i = e.id, q = e.quality }
+  local ak = ArmorKind(e.id)
+  if ak then row.t = row.t .. "  " .. ak end
   if (e.reqLevel or 0) > level then row.d = "Wearable at level " .. e.reqLevel .. ". " .. row.d end
   local link = long and NS.CharSheet and select(2, NS.GetItemInfo(e.id))
   local change = link and NS.CharSheet.ChangeText(link, 5)
@@ -136,12 +148,12 @@ function G.SlotPage(slot, label, icon)
   else
     rows[2] = { t = "Nothing", d = "Anything you can wear here is an upgrade." }
   end
-  local now, random, later, ah, far = {}, {}, {}, {}, {}
+  local now, random, later, ah, far, train = {}, {}, {}, {}, {}, {}
   for _, e in ipairs(NS.Upgrades and NS.Upgrades.all or {}) do
     if Fits(e, slot) then
       local k = Kind(e)
       if k == "now" then now[#now + 1] = e elseif k == "random" then random[#random + 1] = e
-      elseif k == "far" then far[#far + 1] = e
+      elseif k == "far" then far[#far + 1] = e elseif k == "train" then train[#train + 1] = e
       elseif k == "later" then later[#later + 1] = e end
       if e.ah then ah[#ah + 1] = e end
     end
@@ -161,6 +173,7 @@ function G.SlotPage(slot, label, icon)
   Add("Random drops", random, 8)
   Add("Coming up", later, 8)
   Add("On another continent", far, 5)
+  Add(TRAIN_HEAD, train, 5)
   if #ah > 0 then
     rows[#rows + 1] = { h = "Auction House" }
     for k = 1, math.min(#ah, 6) do
@@ -168,13 +181,13 @@ function G.SlotPage(slot, label, icon)
     end
   end
   local st = Status()
-  if #now + #random + #later + #ah + #far == 0 then
+  if #now + #random + #later + #ah + #far + #train == 0 then
     rows[#rows + 1] = { t = st and "Still looking" or "Nothing better found for this slot right now", d = st }
   elseif st then
     rows[#rows + 1] = { t = st, dim = true }
   end
   return { title = label, icon = (w and w.id and NS.ItemIcon(w.id)) or icon, rows = rows,
-           sub = "Click an item for everything about it. Scores use your talent goal (Talents tab)." }
+           sub = "Click an item for everything about it. Scores use your role (top of the Character page)." }
 end
 
 function G.SlotRows()
@@ -211,7 +224,10 @@ function G.ListRows(mode)
   local all = NS.Upgrades and NS.Upgrades.all or {}
   local st = Status()
   local function Head(e) return string.format("%s  (%s)", e.name, Gain(e)) end
-  local function Row(e, d) return { t = Head(e), d = e.slot .. "  ·  " .. d, i = e.id, q = e.quality, key = "item" .. e.id } end
+  local function Row(e, d)
+    local ak = ArmorKind(e.id)
+    return { t = Head(e), d = e.slot .. (ak and (", " .. ak) or "") .. "  ·  " .. d, i = e.id, q = e.quality, key = "item" .. e.id }
+  end
   if mode == "ah" then
     local list = {}
     for _, e in ipairs(all) do if e.ah and (e.reqLevel or 0) <= level then list[#list + 1] = e end end
@@ -225,10 +241,11 @@ function G.ListRows(mode)
     end
     return rows
   end
-  local now, random, later = {}, {}, {}
+  local now, random, later, train = {}, {}, {}, {}
   for _, e in ipairs(all) do
     local k = Kind(e)
-    if k == "now" then now[#now + 1] = e elseif k == "random" then random[#random + 1] = e elseif k == "later" then later[#later + 1] = e end
+    if k == "now" then now[#now + 1] = e elseif k == "random" then random[#random + 1] = e elseif k == "later" then later[#later + 1] = e
+    elseif k == "train" then train[#train + 1] = e end
   end
   if st then rows[#rows + 1] = { t = st, dim = true, key = "status" } end
   if mode == "best" then
@@ -278,6 +295,12 @@ function G.ListRows(mode)
       local l = math.max(e.reqLevel or 0, e.src.req or 0)
       rows[#rows + 1] = Row(e, (l > level and ("level " .. l .. ", ") or "") .. e.src.label)
     end
+  end
+  -- weapons you'd have to learn to use: apart, so they aren't taken for gear you can wear now
+  table.sort(train, function(a, b) return a.gain > b.gain end)
+  if #train > 0 then
+    rows[#rows + 1] = { h = TRAIN_HEAD }
+    for k = 1, math.min(#train, 5) do rows[#rows + 1] = Row(train[k], SourceText(train[k])) end
   end
   if #rows == 0 then rows[1] = { t = "Nothing better found right now", d = "Sunstone looks again when you level up, hand in a quest or change your gear." } end
   return rows

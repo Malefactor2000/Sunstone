@@ -87,6 +87,50 @@ local function Rewards(id)
   r.w = { c = #choice >= #(old.c or {}) and choice or old.c, g = #given >= #(old.g or {}) and given or old.g, m = money > 0 and money or old.m }
 end
 
+-- what the hand-in window asks you to bring: { { item, count }, ... }. That's how an item learns which quest takes it, for
+-- Forever's quests no database has (Darkmoon Faire turn-ins and the like)
+local wanting -- [item] = { quest, ... }, built when first asked
+local function Needs(id)
+  if not (GetNumQuestItems and GetQuestItemLink) then return end
+  local out = {}
+  for i = 1, math.min(tonumber(GetNumQuestItems()) or 0, 6) do
+    local ok, link = pcall(GetQuestItemLink, "required", i)
+    link = ok and Plain(link)
+    local item = type(link) == "string" and tonumber(link:match("item:(%d+)"))
+    if item then
+      local c
+      if GetQuestItemInfo then
+        local ok2, _, _, n = pcall(GetQuestItemInfo, "required", i)
+        c = ok2 and type(n) == "number" and n > 0 and n or nil
+      end
+      out[#out + 1] = { item, c or 1 }
+    end
+  end
+  if #out == 0 then return end
+  local r = Rec(id, true)
+  if type(r.need) == "table" and #r.need > #out then return end -- (items not loaded yet have no link)
+  r.need = out
+  if not r.n and GetTitleText then
+    local t = Plain(GetTitleText())
+    if type(t) == "string" and t ~= "" then r.n = NS.Clean(t, 80) end
+  end
+  wanting = nil
+  if NS.Sell and NS.Sell.Forget then NS.Sell.Forget() end
+end
+-- quests whose hand-in window asked one of your characters for this item: { quest, ... } or nil
+function R.Wanting(item)
+  if not wanting then
+    wanting = {}
+    for id, r in pairs(Store()) do
+      for _, e in ipairs(type(r) == "table" and type(r.need) == "table" and r.need or {}) do
+        local i = type(e) == "table" and e[1]
+        if type(i) == "number" then wanting[i] = wanting[i] or {} table.insert(wanting[i], id) end
+      end
+    end
+  end
+  return wanting[item]
+end
+
 -- what the log says about a quest
 local function FromLog(id)
   local L = C_QuestLog
@@ -257,6 +301,13 @@ function R:Init()
       C_Timer.After(1, function() if GetQuestID and GetQuestID() == id then NS.Safe("quest record", Rewards, id) end end)
     end
   end)
-  NS.On("QUEST_PROGRESS", Ending)
+  NS.On("QUEST_PROGRESS", function()
+    Ending()
+    local id = GetQuestID and GetQuestID()
+    if type(id) == "number" and id > 0 then
+      NS.Safe("quest record", Needs, id)
+      C_Timer.After(1, function() if GetQuestID and GetQuestID() == id then NS.Safe("quest record", Needs, id) end end)
+    end
+  end)
   NS.On("QUEST_LOG_UPDATE", function() NS.Debounce("quest record", 0.4, R.Look) end)
 end

@@ -433,8 +433,20 @@ function E.Hidden(qid)
   return SEASONAL[Q("Quest", qid, "zoneOrSort") or 0] and not events or false
 end
 
-function E.QuestOK(qid)
-  if E.Hidden(qid) then return false end
+-- a holiday's quest (hidden only while the holiday isn't on): the holiday's name, "" when the data doesn't say which; nil = not one
+local HOLIDAY = { [-364] = "Darkmoon Faire" }
+function E.Holiday(qid)
+  if E.Blocked(qid) then return nil end
+  local sort = Q("Quest", qid, "zoneOrSort") or 0
+  if sort == -284 then return nil end -- ("Special": Season of Discovery's and the like, no holiday)
+  local is = SEASONAL[sort]
+  if not is and events then local ok, e = pcall(events.IsEventQuest, qid) is = ok and e end
+  if not is then return nil end
+  return HOLIDAY[sort] or ""
+end
+
+function E.QuestOK(qid, anyTime) -- anyTime: a holiday's quest counts even while the holiday isn't on
+  if anyTime then if E.Blocked(qid) then return false end elseif E.Hidden(qid) then return false end
   if not RaceOK(Q("Quest", qid, "requiredRaces")) or not ClassOK(QuestField(qid, "requiredClasses", 5)) then return false end
   local d = E.Data().quests[qid]
   if d and (d[4] == "A" or d[4] == "H") and d[4] ~= Side() then return false end
@@ -450,7 +462,8 @@ function E.Chain(qid, depth, seen)
   if seen[qid] or depth > 10 then return {} end
   seen[qid] = true
   if not E.QuestOK(qid) then return nil end
-  for _, e in pairs(List(Q("Quest", qid, "exclusiveTo"))) do if E.Done(e) then return nil end end
+  local log = E.Log()
+  for _, e in pairs(List(Q("Quest", qid, "exclusiveTo"))) do if E.Done(e) or log[e] then return nil end end -- (another version done or taken)
   local out, has = {}, {}
   local function add(list, last)
     for _, x in ipairs(list) do if not has[x] then has[x] = true; out[#out + 1] = x end end
@@ -471,6 +484,7 @@ function E.Chain(qid, depth, seen)
       local copy = {}
       for k in pairs(seen) do copy[k] = true end
       local sub = E.Chain(p, depth + 1, copy)
+      if sub and log[p] then best, bestQ = sub, p break end -- the one you already have (Call of Fire: one start per race)
       if sub and (not best or #sub < #best) then best, bestQ = sub, p end
     end
     if not best then return nil end

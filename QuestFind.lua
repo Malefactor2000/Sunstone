@@ -522,6 +522,12 @@ local function NextStep(steps)
   return steps[#steps]
 end
 
+-- a word on how, for a quest that needs it (CampData's tips), or nil
+function QF.Tip(qid)
+  local c = Camp()
+  return c and type(c.tips) == "table" and c.tips[qid] or nil
+end
+
 function QF.Page(qid)
   if not ix then QF.Build() end
   local rows = {}

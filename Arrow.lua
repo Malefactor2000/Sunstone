@@ -111,7 +111,7 @@ end
 local function Changed()
   NS.Safe("arrow", TomTomSync)
   NS.Safe("arrow", DrawPins)
-  Ar.hop, Ar.hopAt = nil, nil
+  Ar.hop, Ar.hopAt, Ar.hopRaw = nil, nil, nil
   NS.Safe("arrow", Ar.Update, true)
 end
 Ar.Changed = Changed
@@ -156,13 +156,18 @@ local function Aim(t)
   if not Ar.Picked() then return t end
   local T = NS.Travel
   local here = T and T.Here and T.Here()
-  if not (here and T.NextHop) or here.m == t.m then return t end
-  if Ar.hopAt ~= here.m then
+  if not (here and T.NextHop) or here.m == t.m or (T.Canon and T.Canon(here.m) == T.Canon(t.m)) then return t end
+  -- re-aimed on a zone change, and on going past (or back out of) a long crossing like a tunnel
+  local raw = Ar.hopRaw
+  local base = raw and (raw.through or raw)
+  local moved = base and base.far and T.Step and T.Step(here, base) ~= (raw.step or 0)
+  if Ar.hopAt ~= here.m or moved then
     Ar.hopAt = here.m
     local hbd = NS.HBD()
     local wx, wy, inst = hbd:GetWorldCoordinatesFromZone(t.x, t.y, t.m)
     local ok, hop
     if wx then ok, hop = pcall(T.NextHop, here, { m = t.m, x = t.x * 100, y = t.y * 100, wx = wx, wy = wy, inst = inst }) end
+    Ar.hopRaw = ok and hop or nil
     Ar.hop = ok and hop and { m = hop.m, x = hop.x / 100, y = hop.y / 100, title = hop.label .. ", then " .. (t.title or "?") } or nil
   end
   return Ar.hop or t

@@ -79,6 +79,31 @@ local function MapName(m)
 end
 T.MapName = MapName
 
+-- Some places have two map IDs in the client (Zephras Isle: 2521 and 2665, its zone and its own continent's map):
+-- the same name, on the same continent, covering the same piece of the world. Routes count them as one zone.
+local canon
+local function Canon(m)
+  if not canon then
+    canon = {}
+    local hbd = NS.HBD()
+    if hbd and type(hbd.mapData) == "table" then
+      local ids, first = {}, {}
+      for id, d in pairs(hbd.mapData) do
+        if type(id) == "number" and type(d) == "table" and type(d.name) == "string" then ids[#ids + 1] = id end
+      end
+      table.sort(ids)
+      for _, id in ipairs(ids) do
+        local d = hbd.mapData[id]
+        local function N(v) return type(v) == "number" and v or 0 end
+        local key = string.format("%s|%s|%.0f|%.0f|%.0f|%.0f", d.name, tostring(d.instance), N(d[1]), N(d[2]), N(d[3]), N(d[4]))
+        if first[key] then canon[id] = first[key] else first[key] = id end
+      end
+    end
+  end
+  return canon[m] or m
+end
+T.Canon = Canon
+
 local function Where(p) return string.format("%s %.1f, %.1f", MapName(p.m), p.x, p.y) end
 
 local function Dist(a, b)
@@ -133,7 +158,7 @@ local function FindTown(text)
         local zm = FindZone(zone)
         -- the arrival is the dock or tower of that kind inside that zone
         for _, o in ipairs(D.transport) do
-          if o.m == zm and o.kind == t.kind then return { kind = "point", m = o.m, x = o.x, y = o.y, name = dest } end
+          if zm and Canon(o.m) == Canon(zm) and o.kind == t.kind then return { kind = "point", m = o.m, x = o.x, y = o.y, name = dest } end
         end
         if zm then return { kind = "zone", m = zm, name = dest } end
       end
@@ -194,6 +219,43 @@ local function AddNode(nodes, n)
   return n
 end
 
+-- The way through a crossing you've walked (a tunnel, a winding pass), learned from your own walk (Track.lua) and kept for all
+-- your characters in NS.db.via[key] = { i = instance, x1, y1, x2, y2, ... } (world yards). Nothing is sent anywhere.
+local function CrossKey(c) return string.format("%d:%.2f,%.2f>%d", c.m, c.x, c.y, c.to) end
+local function ZoneXY(m, wx, wy)
+  local ax, ay = World(m, 0, 0)
+  local bx, by = World(m, 100, 100)
+  if not (ax and bx) or bx == ax or by == ay then return nil end
+  return (wx - ax) / (bx - ax) * 100, (wy - ay) / (by - ay) * 100
+end
+-- A walk that wanders (circling about, fighting on the way) is no way through: far longer than where it ends up. A tunnel or a
+-- winding pass bends, but not like that. pts = { { x, y }, ... } world yards -> true when it's a wander; and its length
+local function Wander(pts)
+  local len = 0
+  for k = 2, #pts do len = len + math.sqrt((pts[k].x - pts[k - 1].x) ^ 2 + (pts[k].y - pts[k - 1].y) ^ 2) end
+  local straight = #pts > 1 and math.sqrt((pts[#pts].x - pts[1].x) ^ 2 + (pts[#pts].y - pts[1].y) ^ 2) or 0
+  return len > straight * 3 + 150, len
+end
+T.Wander = Wander
+
+local function Via(n)
+  local all = NS.db and type(NS.db.via) == "table" and NS.db.via
+  local v = all and all[n.key]
+  if type(v) ~= "table" or v.i ~= n.inst then return nil end
+  local out, line = {}, { { x = n.wx, y = n.wy } }
+  for k = 1, #v - 1, 2 do
+    local wx, wy = v[k], v[k + 1]
+    if Num(wx) and Num(wy) then
+      line[#line + 1] = { x = wx, y = wy }
+      local x, y = ZoneXY(n.m, wx, wy)
+      if x then out[#out + 1] = { m = n.m, x = x, y = y, wx = wx, wy = wy, inst = n.inst } end
+    end
+  end
+  local bad, len = Wander(line)
+  if bad then all[n.key] = nil return nil end -- (learned before this check: forgotten, the next walk through learns it again)
+  return #out > 0 and out or nil, len
+end
+
 local function Link(a, b, cost, how)
   a.edges[#a.edges + 1] = { to = b, cost = cost, how = how }
 end
@@ -202,14 +264,17 @@ local function Build()
   if graph then return graph end
   local d = Load()
   local nodes, byMap = {}, {}
-  local function Index(n) if n then byMap[n.m] = byMap[n.m] or {}; table.insert(byMap[n.m], n) end return n end
+  local function Index(n) if n then local k = Canon(n.m); byMap[k] = byMap[k] or {}; table.insert(byMap[k], n) end return n end
   -- zone borders: each crossing point links to the matching point on the other side
-  for _, c in ipairs(d.cross) do Index(AddNode(nodes, { m = c.m, x = c.x, y = c.y, kind = "cross", to = c.to })) end
+  for _, c in ipairs(d.cross) do
+    local n = Index(AddNode(nodes, { m = c.m, x = c.x, y = c.y, kind = "cross", to = c.to, key = CrossKey(c) }))
+    if n then n.via, n.viaLen = Via(n) end
+  end
   for _, n in ipairs(nodes) do
     if n.kind == "cross" then
       local best, bd
-      for _, o in ipairs(byMap[n.to] or {}) do
-        if o.kind == "cross" and o.to == n.m then
+      for _, o in ipairs(byMap[Canon(n.to)] or {}) do
+        if o.kind == "cross" and Canon(o.to) == Canon(n.m) then
           local dd = Dist(n, o)
           if dd and (not bd or dd < bd) then best, bd = o, dd end
         end
@@ -220,7 +285,8 @@ local function Build()
         local ok, x, y = pcall(hbd.TranslateZoneCoordinates, hbd, n.x / 100, n.y / 100, n.m, n.to, true)
         if ok and x then best = Index(AddNode(nodes, { m = n.to, x = x * 100, y = y * 100, kind = "arrive" })) end
       end
-      if best then Link(n, best, 5, "cross") end
+      -- (the walk to the other side: a learned way through's length, else how far apart the two sides are, as in Thunder Bluff)
+      if best then Link(n, best, 5 + math.max(n.via and n.viaLen or 0, bd or 0) / RUN, "cross") end
     end
   end
   -- flight masters of your faction: fly between any two on the same continent
@@ -245,16 +311,22 @@ local function Build()
     end
   end
   for _, a in ipairs(stops) do
-    for _, dest in ipairs(a.dests) do
-      local zone = dest:match(",%s*(.+)$") or dest
-      local zm = FindZone(zone:lower())
+    a.destZones = {}
+    for i, dest in ipairs(a.dests) do a.destZones[i] = FindZone((dest:match(",%s*(.+)$") or dest):lower()) end
+  end
+  for _, a in ipairs(stops) do
+    for i, dest in ipairs(a.dests) do
+      local zm = a.destZones[i]
       local cx, cy, ci
       if zm then cx, cy, ci = World(zm, 50, 50) end -- (all three values: "zm and World()" would keep only one)
       local best, bd
       for _, b in ipairs(stops) do
         if b ~= a and b.ride == a.ride and cx and b.inst == ci then
           local dd = math.sqrt((b.wx - cx) ^ 2 + (b.wy - cy) ^ 2)
-          if b.m == zm then dd = 0 end
+          if Canon(b.m) == Canon(zm) then
+            dd = 0
+            for _, bz in pairs(b.destZones) do if Canon(bz) == Canon(a.m) then dd = -1 end end
+          end
           if not bd or dd < bd then best, bd = b, dd end
         end
       end
@@ -288,11 +360,11 @@ local function Route(start, target, opts)
     if n == goal then return {} end
     local e = {}
     for _, x in ipairs(n.edges or {}) do if not (walk and x.how == "fly") then e[#e + 1] = x end end
-    for _, x in ipairs(Walks(n, g.byMap[n.m])) do e[#e + 1] = x end
-    if target.kind == "zone" and n.m == target.m then e[#e + 1] = { to = goal, cost = 0, how = "arrive" } end
+    for _, x in ipairs(Walks(n, g.byMap[Canon(n.m)])) do e[#e + 1] = x end
+    if target.kind == "zone" and Canon(n.m) == Canon(target.m) then e[#e + 1] = { to = goal, cost = 0, how = "arrive" } end
     if target.kind == "point" then
       local dd = Dist(n, target.node)
-      if dd and (n.m == target.node.m or (not walk and dd < 1500)) then e[#e + 1] = { to = goal, cost = dd * DETOUR / RUN, how = "walk" } end
+      if dd and (Canon(n.m) == Canon(target.node.m) or (not walk and dd < 1500)) then e[#e + 1] = { to = goal, cost = dd * DETOUR / RUN, how = "walk" } end
     end
     return e
   end
@@ -346,17 +418,60 @@ end
 -- crossing (or boat / zeppelin) along the walking route, so the arrow and trail don't cut over mountains.
 -- nil when the spot is in your own zone, or no way there is known (then the arrow points straight at it).
 local hopCache = {}
+-- distance from p to the piece a-b, and how far along it (0-1) the nearest spot is
+local function SegDist(p, a, b)
+  if not (p.wx and a.wx and b.wx) then return nil end
+  local dx, dy = b.wx - a.wx, b.wy - a.wy
+  local len2 = dx * dx + dy * dy
+  local t = len2 > 0 and ((p.wx - a.wx) * dx + (p.wy - a.wy) * dy) / len2 or 0
+  t = math.max(0, math.min(1, t))
+  return math.sqrt((p.wx - a.wx - t * dx) ^ 2 + (p.wy - a.wy - t * dy) ^ 2), t
+end
+-- A zone line can lie well past a crossing's near side (the Dun Algaz tunnel: you're still in the Wetlands halfway through).
+-- How far along you are: 0 = not in it yet (head for the near side); k = head for point k of the way through (its learned
+-- points, then the far side). With no learned way: past it once at the near side or closer to the far side than it is.
+local function Step(here, hop)
+  if not (hop and hop.far and here and here.wx) or here.inst ~= hop.inst then return 0 end
+  local dn = Dist(here, hop)
+  local via = hop.via
+  if not via then
+    local df, span = Dist(here, hop.far), Dist(hop, hop.far)
+    return ((dn and dn < 30) or (df and span and df < span)) and 1 or 0
+  end
+  local line = { hop }
+  for _, v in ipairs(via) do line[#line + 1] = v end
+  line[#line + 1] = hop.far
+  local best, bk, bt
+  for k = 1, #line - 1 do
+    local d, t = SegDist(here, line[k], line[k + 1])
+    if d and (not best or d < best) then best, bk, bt = d, k, t end
+  end
+  -- off the way through, or still before its start: the near side first (unless you're right at it)
+  if not best or best > 120 or (bk == 1 and bt <= 0) then return (dn and dn < 30) and 1 or 0 end
+  -- head for the end of the piece you're on; right at it, the one after
+  local nd = Dist(here, line[bk + 1])
+  if nd and nd < 25 and bk < #line - 1 then bk = bk + 1 end
+  return bk
+end
+T.Step = Step
+-- the hop to aim at from here: along the way through once you're in it
+local function Through(here, hop)
+  local s = hop and Step(here, hop) or 0
+  if s == 0 then return hop end
+  local p = (hop.via and hop.via[s]) or hop.far
+  return { m = p.m, x = p.x, y = p.y, label = hop.label, through = hop, step = s }
+end
 function T.NextHop(here, p)
   if not here or not p or not p.m then return nil end
   if here.wx and p.wx then
     local fp = T.FlightOnTheWay(here, p)
     if fp then return fp.first end
   end
-  if here.m == p.m then return nil end
+  if Canon(here.m) == Canon(p.m) then return nil end
   -- where you stand matters too (a zone can have several crossings): roughly, in tenths of the map
   local key = string.format("%d:%d,%d>%d:%.0f,%.0f", here.m, math.floor((here.x or 0) / 10), math.floor((here.y or 0) / 10),
                             p.m, p.x, p.y)
-  if hopCache[key] ~= nil then return hopCache[key] or nil end
+  if hopCache[key] ~= nil then return Through(here, hopCache[key] or nil) end
   local node = { m = p.m, x = p.x, y = p.y }
   node.wx, node.wy, node.inst = World(p.m, p.x, p.y)
   local hop = false
@@ -364,7 +479,9 @@ function T.NextHop(here, p)
     local path = Route(here, { kind = "point", node = node, name = "" }, { walk = true })
     for _, s in ipairs(path or {}) do
       if s.how == "cross" then
-        hop = { m = s.from.m, x = s.from.x, y = s.from.y, label = "Cross into " .. MapName(s.node.m) }
+        local a, b = s.from, s.node
+        hop = { m = a.m, x = a.x, y = a.y, wx = a.wx, wy = a.wy, inst = a.inst, label = "Cross into " .. MapName(b.m), via = a.via,
+                far = { m = b.m, x = b.x, y = b.y, wx = b.wx, wy = b.wy, inst = b.inst } }
         break
       elseif s.how:sub(1, 5) == "ride:" then
         hop = { m = s.from.m, x = s.from.x, y = s.from.y, label = "Take the " .. (s.from.label or "boat") .. " to " .. s.how:sub(6) }
@@ -373,7 +490,7 @@ function T.NextHop(here, p)
     end
   end
   hopCache[key] = hop
-  return hop or nil
+  return Through(here, hop or nil)
 end
 
 -- A spot on another continent: the boat, zeppelin or airship stop where the way there leaves this one (whether or not
@@ -410,7 +527,7 @@ function T.Hops(a, b)
     local fp = T.FlightOnTheWay(a, b)
     if fp then return fp.points end
   end
-  if a.m == b.m then return {} end
+  if Canon(a.m) == Canon(b.m) then return {} end
   local key = string.format("%d:%.0f,%.0f>%d:%.0f,%.0f", a.m, a.x, a.y, b.m, b.x, b.y)
   if hopsCache[key] then return hopsCache[key] end
   local start = { m = a.m, x = a.x, y = a.y }
@@ -422,13 +539,82 @@ function T.Hops(a, b)
     local path = Route(start, { kind = "point", node = node, name = "" }, { walk = true })
     for _, s in ipairs(path or {}) do
       if s.how == "cross" or s.how:sub(1, 5) == "ride:" then
-        out[#out + 1] = { m = s.from.m, x = s.from.x, y = s.from.y }
+        local via = s.how == "cross" and s.from.via or nil
+        local step = (#out == 0 and s.how == "cross") and Step(start, { wx = s.from.wx, wy = s.from.wy, inst = s.from.inst, far = s.node, via = via }) or 0
+        if step == 0 then out[#out + 1] = { m = s.from.m, x = s.from.x, y = s.from.y } end
+        for k = math.max(step, 1), via and #via or 0 do out[#out + 1] = { m = via[k].m, x = via[k].x, y = via[k].y } end
         out[#out + 1] = { m = s.node.m, x = s.node.x, y = s.node.y }
       end
     end
   end
   hopsCache[key] = out
   return out
+end
+
+-- Learning the way through a crossing: called (Track.lua) when you walk from one zone into another, with the spots you walked
+-- ({ x, y } world yards, oldest first, the last one in the new zone). From the last time you stood at a listed crossing's near
+-- side, the walk without its dead ends, if it bends (a tunnel, a winding pass), becomes that crossing's way through.
+local function Off(p, a, b) return (SegDist({ wx = p.x, wy = p.y }, { wx = a.x, wy = a.y }, { wx = b.x, wy = b.y })) or 0 end
+local function Simplify(pts, i, j, out, tol)
+  local far, fk = 0, nil
+  for k = i + 1, j - 1 do
+    local d = Off(pts[k], pts[i], pts[j])
+    if d > far then far, fk = d, k end
+  end
+  if fk and far > tol then
+    Simplify(pts, i, fk, out, tol)
+    Simplify(pts, fk, j, out, tol)
+  else
+    out[#out + 1] = pts[j]
+  end
+end
+function T.LearnCrossing(fromM, toM, inst, pts)
+  if not (fromM and toM and inst and type(pts) == "table" and #pts >= 3) or Canon(fromM) == Canon(toM) then return false end
+  local function D(a, b) return math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2) end
+  local best, bi
+  for _, n in ipairs(Build().byMap[Canon(fromM)] or {}) do
+    if n.kind == "cross" and Canon(n.to) == Canon(toM) and n.inst == inst and n.key then
+      for i = #pts - 1, 1, -1 do
+        if D(pts[i], { x = n.wx, y = n.wy }) < 40 then
+          if not bi or i > bi then best, bi = n, i end
+          break
+        end
+      end
+    end
+  end
+  if not best then return false end
+  -- the walk from there, without the loops (a dead end you came back out of)
+  local walk, i = {}, bi
+  while i <= #pts do
+    local j = i
+    for k = #pts, i + 1, -1 do if D(pts[i], pts[k]) < 30 then j = k break end end
+    walk[#walk + 1] = pts[j]
+    i = j + 1
+  end
+  if #walk < 2 then return false end
+  local len = 0
+  for k = 2, #walk do len = len + D(walk[k - 1], walk[k]) end
+  if len > 3000 then return false end
+  if Wander(walk) then return false end -- (wandered about on the way: nothing to learn from it)
+  -- a straight walk needs nothing learned
+  local bend = 0
+  for k = 2, #walk - 1 do bend = math.max(bend, Off(walk[k], walk[1], walk[#walk])) end
+  NS.db.via = type(NS.db.via) == "table" and NS.db.via or {}
+  if bend < 40 then
+    if NS.db.via[best.key] == nil then return false end
+    NS.db.via[best.key] = nil
+  else
+    local kept = {}
+    Simplify(walk, 1, #walk, kept, 20)
+    local v = { i = inst }
+    for _, p in ipairs(kept) do v[#v + 1] = math.floor(p.x + 0.5); v[#v + 1] = math.floor(p.y + 0.5) end
+    NS.db.via[best.key] = v
+  end
+  -- everything that went the straight way: worked out again
+  graph, hopCache, dockCache, hopsCache = nil, {}, {}, {}
+  if NS.Arrow then NS.Arrow.hopAt = nil end
+  if NS.Route then NS.Route.arrowZone = nil end
+  return true
 end
 
 function T.Directions(target)
@@ -442,11 +628,11 @@ function T.Directions(target)
       return { { t = target.name .. " is right around here", d = string.format("%s, about %d yards away", Where(target.node), dd),
                  m = target.m, x = target.x / 100, y = target.y / 100 } }
     end
-  elseif here.m == target.m then
+  elseif Canon(here.m) == Canon(target.m) then
     local lv = Load().levels[target.m]
     return { { t = "You're already in " .. MapName(target.m), d = lv and string.format("Levels %d-%d", lv[1], lv[2]) or nil } }
   end
-  if target.kind == "zone" and not (Build().byMap[target.m]) then
+  if target.kind == "zone" and not (Build().byMap[Canon(target.m)]) then
     local name = target.name or MapName(target.m)
     target = { kind = "point", m = target.m, x = 50, y = 50, name = name }
     target.node = { m = target.m, x = 50, y = 50 }
@@ -550,7 +736,7 @@ function T.Search(text)
     if f.kind == "zone" then
       local rows = T.Directions({ kind = "zone", m = f.m, name = f.name })
       local here = T.Here and T.Here()
-      if not (here and here.m == f.m) then table.insert(rows, 1, NS.Places.PlaceRow(f.name, f.m, 50, 50, "Zone", "splz")) end
+      if not (here and Canon(here.m) == Canon(f.m)) then table.insert(rows, 1, NS.Places.PlaceRow(f.name, f.m, 50, 50, "Zone", "splz")) end
       return rows
     end
     local rows = T.Directions({ kind = "point", m = f.m, x = f.x, y = f.y, name = f.name })
@@ -648,6 +834,27 @@ function T.LearnFlights() -- the flight map is open
     local info = C_Map.GetMapInfo and C_Map.GetMapInfo(m)
     m = info and info.parentMapID
   end
+  -- which of your flight points this map reaches: the game only flies along paths you've learned, so two of yours can be
+  -- cut off from each other (Kargath and Tarren Mill, until you know Undercity)
+  local at, r, rs = nil, {}, {}
+  for name, kind in pairs(kinds) do
+    local c = NS.Clean(name, 60)
+    if kind == "CURRENT" then at = c end
+    if (kind == "CURRENT" or kind == "REACHABLE") and c ~= "" and not rs[c] then rs[c] = true r[#r + 1] = c end
+  end
+  if at then
+    local u, us = {}, {}
+    for _, name in pairs(Flights()) do if type(name) == "string" and name ~= "" and not rs[name] and not us[name] then us[name] = true u[#u + 1] = name end end
+    table.sort(r) table.sort(u)
+    NS.cdb.reach = type(NS.cdb.reach) == "table" and NS.cdb.reach or {}
+    local old = NS.cdb.reach[at]
+    local was = type(old) == "table" and type(old.r) == "table" and type(old.u) == "table" and (table.concat(old.r, "|") .. "/" .. table.concat(old.u, "|"))
+    if was ~= table.concat(r, "|") .. "/" .. table.concat(u, "|") then
+      NS.cdb.reach[at] = { r = r, u = u }
+      T.version = T.version + 1
+      new = true
+    end
+  end
   if new and NS.Route and NS.cdb.route and NS.cdb.route.enabled then
     NS.Debounce("route flights", 3, function() NS.Route.Compute(true) end)
   end
@@ -722,6 +929,37 @@ local function Reset()
   hubsFor = (graph and tostring(graph) or "") .. T.version
 end
 
+-- Can the game fly you between two of your flight points? Yes, unless a flight map you opened showed them apart (one
+-- reachable, the other known but not) and no later map joined them (learning a point in between links both sides).
+local function Linker()
+  local R = type(NS.cdb.reach) == "table" and NS.cdb.reach or nil
+  if not R or next(R) == nil then return function() return true end end
+  local up, sets = {}, {}
+  local function Find(a) while up[a] ~= a do a = up[a] end return a end
+  for _, e in pairs(R) do
+    if type(e) == "table" and type(e.r) == "table" then
+      local rs, us, first = {}, {}, nil
+      for _, n in ipairs(e.r) do
+        rs[n] = true
+        up[n] = up[n] or n
+        if first then local x, y = Find(first), Find(n) if x ~= y then up[y] = x end else first = n end
+      end
+      for _, n in ipairs(type(e.u) == "table" and e.u or {}) do us[n] = true end
+      sets[#sets + 1] = { r = rs, u = us }
+    end
+  end
+  return function(x, y)
+    local a, b = Flights()[FlightKey(x)], Flights()[FlightKey(y)]
+    if not (a and b) or a == b then return true end
+    if up[a] and up[b] and Find(a) == Find(b) then return true end
+    for _, e in ipairs(sets) do
+      if (e.r[a] and e.u[b]) or (e.r[b] and e.u[a]) then return false end
+    end
+    return true
+  end
+end
+T.Linker = Linker
+
 -- Everything walkable or flyable between zones on one continent: crossings, and your flight masters.
 local function Hubs(inst, yield)
   Build()
@@ -735,8 +973,8 @@ local function Hubs(inst, yield)
     if n.inst == inst and (n.kind == "cross" or n.kind == "arrive" or known) then
       h.list[#h.list + 1] = n
       at[n] = #h.list
-      h.byMap[n.m] = h.byMap[n.m] or {}
-      table.insert(h.byMap[n.m], #h.list)
+      h.byMap[Canon(n.m)] = h.byMap[Canon(n.m)] or {}
+      table.insert(h.byMap[Canon(n.m)], #h.list)
       if known then h.flights = h.flights + 1 end
     end
   end
@@ -746,7 +984,7 @@ local function Hubs(inst, yield)
     local row, n = {}, h.list[a]
     for b = 1, N do
       local o = h.list[b]
-      row[b] = a == b and 0 or (n.m == o.m and Dist(n, o) * (CITIES[n.m] and IN_CITY or 1.2) / RUN) or math.huge
+      row[b] = a == b and 0 or (Canon(n.m) == Canon(o.m) and Dist(n, o) * (CITIES[n.m] and IN_CITY or 1.2) / RUN) or math.huge
     end
     for _, e in ipairs(n.edges or {}) do
       if e.how == "cross" and at[e.to] then row[at[e.to]] = math.min(row[at[e.to]], 5 + (Dist(n, e.to) or 0) / RUN) end
@@ -777,12 +1015,13 @@ local function Hubs(inst, yield)
   h.W = W
   if h.flights >= 2 then
     local F, nxt = {}, {}
+    local Linked = Linker()
     for a = 1, N do
       F[a], nxt[a] = {}, {}
       for b = 1, N do
         F[a][b], nxt[a][b] = W[a][b], b
         local x, y = h.list[a], h.list[b]
-        if a ~= b and x.kind == "flight" and y.kind == "flight" then
+        if a ~= b and x.kind == "flight" and y.kind == "flight" and Linked(x, y) then
           local v = Dist(x, y) * AIR / FLY + FLY_STOP
           if v < F[a][b] then F[a][b] = v end
         end
@@ -803,7 +1042,7 @@ local function Place(p, h)
   local w = where[key]
   if w then return w end
   w = { near = {}, W = {}, F = h.F and {} or nil }
-  for _, i in ipairs(h.byMap[p.m] or {}) do
+  for _, i in ipairs(h.byMap[Canon(p.m)] or {}) do
     w.near[i] = math.sqrt((h.list[i].wx - p.wx) ^ 2 + (h.list[i].wy - p.wy) ^ 2) * (CITIES[p.m] and IN_CITY or 1.2) / RUN
   end
   for j = 1, #h.list do
@@ -846,7 +1085,7 @@ function T.Seconds(a, b)
   if line < 1 then return line end
   local m = Measured(a, b, line)
   local walk = m and line * m or nil
-  local same = a.m ~= nil and a.m == b.m
+  local same = a.m ~= nil and b.m ~= nil and Canon(a.m) == Canon(b.m)
   if not walk and (same or not a.m or not b.m) then walk = line * (a.m and CITIES[a.m] and IN_CITY or a.m and IN_ZONE or ROUGH) end
   local h = hubs[a.inst or 0] or hubs[b.inst or 0]
   if not h or not a.m or not b.m then return walk or line * ROUGH end
@@ -930,7 +1169,7 @@ function T.FlightOnTheWay(a, b)
     if not first then
       if h.direct[i][j] and x.kind == "flight" then
         first = { m = x.m, x = x.x, y = x.y, label = "Fly from " .. FlightName(x) .. " to " .. FlightName(y), fly = true }
-      elseif x.m ~= y.m then
+      elseif Canon(x.m) ~= Canon(y.m) then
         first = { m = x.m, x = x.x, y = x.y, label = "Cross into " .. MapName(y.m) }
       end
     end

@@ -208,7 +208,18 @@ local function Tick()
   if not m then if path or job then Tr.Clear("No destination: turn the route on, or set a TomTom waypoint.") end return end
   local tx, ty, tinst = hbd:GetWorldCoordinatesFromZone(x, y, m)
   if not tx or tinst ~= inst then if path or job then Tr.Clear("Your destination is on another continent.") end return end
-  if not NS.Nav.Has(inst) then if path or job then Tr.Clear("No ground data for this continent.") end return end
+  if not NS.Nav.Has(inst) then
+    -- no ground data for this land (yet): a plain straight line, drawn gray, from where you stand
+    if not (plan and plan.straight and plan.inst == inst and Dist(plan.tx, plan.ty, tx, ty) < 3) then
+      ClearDots()
+      job, plan = nil, { inst = inst, tx = tx, ty = ty, title = title, straight = true }
+      Tr.status = "No ground data for this land: a straight line to " .. (title or "your destination") .. "."
+    end
+    if Dist(px, py, tx, ty) < ARRIVED then Tr.Clear("You're there.") return end
+    path = { { px, py, false }, { tx, ty, false } }
+    Draw(px, py, inst)
+    return
+  end
   if Dist(px, py, tx, ty) < ARRIVED then if path or job then Tr.Clear("You're there.") end return end
   local same = plan and plan.inst == inst and Dist(plan.tx, plan.ty, tx, ty) < 3
   if not same then

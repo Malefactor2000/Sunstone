@@ -183,7 +183,7 @@ local FIELDS = {
   objects = { name = function(f) return f[1] end, spawns = function(f) return Spawns(f[2], f[3]) end },
   items = {
     name = function(f) return f[1] end, npcDrops = function(f) return Ids(f[2]) end, objectDrops = function(f) return Ids(f[3]) end, vendors = function(f) return Ids(f[4]) end,
-    requiredLevel = function(f) return tonumber(f[5]) or 0 end, startQuest = function(f) return tonumber(f[6]) end, questRewards = function(f) return Ids(f[7]) end,
+    requiredLevel = function(f) return tonumber(f[5]) or 0 end, startQuest = function(f) local q = tonumber(f[6]) return q and q > 0 and q or nil end, questRewards = function(f) return Ids(f[7]) end,
     relatedQuests = function() return nil end, again = function(f) return f[8] == "u" or nil end,
   },
 }
@@ -228,8 +228,20 @@ QD.own = {
 ---------------------------------------------------------------------------
 -- what Sunstone saw itself comes after Questie (which is checked by many) and before Classic's data for a quest Forever changed
 local SEEN_FIRST = { startedBy = true, finishedBy = true } -- who really gives and takes it here
+-- Where Forever differs from every database (Questie's and Classic's alike), seen in game by a player standing there.
+-- Checked before anything else. { kind = { [id] = { field = value } } }; spawns as above, { [area] = { { x, y } } }
+local FOREVER = {
+  Npc = {
+    [3058] = { spawns = { [215] = { { 48.0, 28.5 } } } }, -- Arra'chea (Rites of the Earthmother): spawns here, not at Classic's 51.2, 24.8 (2026-11-26)
+  },
+}
+QD.FOREVER = FOREVER
+
 local function Merged(kind, base, rec, questie)
+  local fix = FOREVER[kind]
   local function Get(id, field)
+    local f = fix and fix[id]
+    if f and f[field] ~= nil then return f[field] end
     if rec and not questie and SEEN_FIRST[field] then
       local v = rec(id, field)
       if v ~= nil then return v end

@@ -78,6 +78,39 @@ local CLASS_SIMPLE = { MAGE = "caster", PRIEST = "caster", DRUID = "caster", SHA
   ROGUE = "agile", HUNTER = "agile", WARRIOR = "strong", PALADIN = "strong" }
 
 local weightCache = {}
+-- Armor for a melee or hunter build that plays alone: 20 armor = 1 attack power (the curves' own level-30 Enhancement
+-- point has about twice that; their other points have next to nothing).
+local SOLO_ARMOR = 0.05
+U.SOLO_ARMOR = SOLO_ARMOR
+local function ForSolo(class, planId) -- the build is for leveling or playing alone (no build picked counts as leveling)
+  if not planId or planId == "none" then return true end
+  for _, p in ipairs(NS.ClassPlans and NS.ClassPlans(class) or {}) do
+    if p.id == planId then
+      for _, g in ipairs(p.goals or {}) do if g == "solo" or g == "leveling" then return true end end
+      return false
+    end
+  end
+  return true -- a plan of your own from the desktop helper
+end
+-- One spec's weights at a level, from a class's table in Data.lua (nil = no weights for it)
+local function At(c, spec, level)
+  local curve = c and type(c.curves) == "table" and (c.curves[spec] or c.curves.Leveling)
+  if not curve then return nil end
+  if level >= 58 then
+    for _, sp in ipairs(c.specs or {}) do if sp[1] == spec then return sp[2] end end
+  end
+  if level <= curve[1][1] then return curve[1][2] end
+  for i = 2, #curve do
+    local a, b = curve[i - 1], curve[i]
+    if level <= b[1] then
+      local t, w = (level - a[1]) / (b[1] - a[1]), {}
+      for k in pairs(a[2]) do w[k] = (a[2][k] or 0) * (1 - t) + (b[2][k] or 0) * t end
+      for k in pairs(b[2]) do if w[k] == nil then w[k] = (b[2][k] or 0) * t end end
+      return w
+    end
+  end
+  return curve[#curve][2]
+end
 local function Weights(class, level, planId) -- planId: another character's; left out = yours
   local D = NS.Engine and NS.Engine.Data()
   local c = D and D.weights[class]
@@ -88,40 +121,38 @@ local function Weights(class, level, planId) -- planId: another character's; lef
   local key = class .. level .. tostring(planId)
   if weightCache[key] then return weightCache[key], weightCache[key .. "spec"] end
   local spec = PLAN_SPEC[planId] or "Leveling"
-  local curve = c and type(c.curves) == "table" and (c.curves[spec] or c.curves.Leveling)
-  local out
-  if not curve then
-    out = SIMPLE[CLASS_SIMPLE[class] or "caster"]
-  elseif level >= 58 then
-    for _, sp in ipairs(c.specs or {}) do if sp[1] == spec then out = sp[2] end end
-  end
-  if not out then
-    out = curve[#curve][2]
-    if level <= curve[1][1] then
-      out = curve[1][2]
-    else
-      for i = 2, #curve do
-        local a, b = curve[i - 1], curve[i]
-        if level <= b[1] then
-          local t, w = (level - a[1]) / (b[1] - a[1]), {}
-          for k in pairs(a[2]) do w[k] = (a[2][k] or 0) * (1 - t) + (b[2][k] or 0) * t end
-          for k in pairs(b[2]) do if w[k] == nil then w[k] = (b[2][k] or 0) * t end end
-          out = w
-          break
-        end
-      end
-    end
-  end
-  if planId == "shaman-tank" then -- no tank curve for shamans: the same stats, with survival counted more
+  local out = At(c, spec, level) or SIMPLE[CLASS_SIMPLE[class] or "caster"]
+  -- The damage curves leave armor out (or nearly), so cloth with a point of Intellect beat leather or mail for a
+  -- melee or hunter playing alone. Playing solo, every hit you take costs time to heal or eat back: armor counts.
+  if ((out.ap or 0) > 0 or (out.rap or 0) > 0) and (out.armor or 0) < SOLO_ARMOR and ForSolo(class, planId) then
     local w = {}
     for k, v in pairs(out) do w[k] = v end
-    w.sta, w.armor = math.max(w.sta or 0, 3), math.max(w.armor or 0, 0.15)
+    w.armor = SOLO_ARMOR
     out = w
   end
   weightCache[key], weightCache[key .. "spec"] = out, spec
   return out, spec
 end
 U.Weights = Weights
+
+-- What the weights of your role count most, in words -> { up to three stat names }, whether armor counts
+local NAMES = { str = "Strength", agi = "Agility", sta = "Stamina", int = "Intellect", spi = "Spirit", ap = "attack power",
+                rap = "ranged attack power", sp = "spell power", heal = "healing power" }
+function U.Values(class, level, planId)
+  if not class then _, class = UnitClass("player") end
+  local w = Weights(class, level or UnitLevel("player"), planId)
+  local list = {}
+  for k, n in pairs(NAMES) do
+    local v = w[k]
+    if k == "sp" and (w.heal or 0) > 0 then v = nil end -- healing gear: "healing power" says it
+    if k == "ap" and (w.rap or 0) >= (w.ap or 0) then v = nil end -- a hunter: ranged attack power says it
+    if type(v) == "number" and v > 0.05 then list[#list + 1] = { n, v } end
+  end
+  table.sort(list, function(a, b) if a[2] ~= b[2] then return a[2] > b[2] end return a[1] < b[1] end)
+  local out = {}
+  for i = 1, math.min(3, #list) do out[i] = list[i][1] end
+  return out, (w.armor or 0) >= SOLO_ARMOR
+end
 
 local SLOTS = {
   INVTYPE_HEAD = { 1 }, INVTYPE_NECK = { 2 }, INVTYPE_SHOULDER = { 3 }, INVTYPE_CHEST = { 5 }, INVTYPE_ROBE = { 5 },

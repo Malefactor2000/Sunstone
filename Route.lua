@@ -1607,7 +1607,11 @@ function R.Watch()
   -- crossed into another zone: aim at the next crossing on the way (or the stop itself once you're in its zone)
   if NS.cdb.route.enabled and not R.paused and #R.stops > 0 and NS.Travel and NS.Travel.Here then
     local here = NS.Travel.Here()
-    if here and here.m ~= R.arrowZone then
+    -- or went past (or back out of) a long crossing like a tunnel, still in the old zone
+    local h = R.hop
+    local base = h and (h.through or h)
+    local moved = here and base and base.far and NS.Travel.Step and NS.Travel.Step(here, base) ~= (h.step or 0)
+    if here and (here.m ~= R.arrowZone or moved) then
       SetArrow()
       R.UpdatePanel()
     end

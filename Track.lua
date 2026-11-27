@@ -52,13 +52,30 @@ function Tk.Add(inst, x, y) -- true when it was far enough to remember
   return true
 end
 
+-- the last stretch walked, with the zone of each spot: walking from one zone into another, Travel learns the way through
+-- that crossing (a tunnel, a winding pass) so the arrow and the route line follow it next time, for all your characters
+local recent = {}
+local function Learn(hbd, inst, x, y)
+  local _, _, m = hbd:GetPlayerZonePosition()
+  local p = recent[#recent]
+  if p and (p.i ~= inst or (x - p.x) ^ 2 + (y - p.y) ^ 2 > BREAK * BREAK) then recent, p = {}, nil end
+  recent[#recent + 1] = { i = inst, x = x, y = y, m = m }
+  if #recent > 250 then table.remove(recent, 1) end
+  if p and m and p.m and m ~= p.m and NS.Travel and NS.Travel.LearnCrossing then
+    NS.Safe("learning a crossing", NS.Travel.LearnCrossing, p.m, m, inst, recent)
+  end
+end
+
 function Tk.Tick()
   local hbd = NS.HBD()
-  if not hbd or (IsInInstance and IsInInstance()) then return end
-  if (UnitOnTaxi and UnitOnTaxi("player")) or (UnitIsGhost and UnitIsGhost("player")) then last = nil return end
+  if not hbd or (IsInInstance and IsInInstance()) then recent = {} return end
+  if (UnitOnTaxi and UnitOnTaxi("player")) or (UnitIsGhost and UnitIsGhost("player")) then last = nil; recent = {} return end
   local x, y, inst = hbd:GetPlayerWorldPosition()
   if not x or not inst then return end
-  if Tk.Add(inst, x, y) and Tk.On() then Tk.Draw() end
+  if Tk.Add(inst, x, y) then
+    Learn(hbd, inst, x, y)
+    if Tk.On() then Tk.Draw() end
+  end
 end
 
 function Tk.Clear()

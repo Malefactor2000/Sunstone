@@ -5,13 +5,14 @@
 --     it only reads the prices on show; it never buys, sells or clicks anything there.
 --   * Deaf to other players: it registers no chat, whisper, mail, guild or party message events and
 --     never reads other players' names or text, so nothing anyone types in game can reach it.
---   * Silent: it sends no chat or addon messages and joins no channels, so other players can't
---     detect it or talk to it.
+--   * Silent: it sends no chat messages. The one exception is Version.lua (the player's call, 2026-11-26): at login it
+--     asks your guild, group and its own hidden channel for Sunstone version numbers, and reads nothing but a number
+--     like 2.5.9 back. It can be switched off in the Guide, Settings, Sharing.
 --   * Everything it receives from the desktop helper (Inbox.lua, GearList.lua) is checked and cleaned
 --     before use.
 
 local ADDON, NS = ...
-NS.version = "2.5.6"
+NS.version = "2.6.0"
 
 function NS.CharKey() return (UnitName("player") or "?") .. "-" .. (GetRealmName() or "?") end
 

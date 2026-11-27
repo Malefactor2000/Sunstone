@@ -91,15 +91,21 @@ function S.Quests(id)
   local out, seen = {}, {}
   local log = E.Log()
   local function Add(qid, starts)
-    if type(qid) ~= "number" or seen[qid] or E.Done(qid) then return end
+    if type(qid) ~= "number" or qid <= 0 or seen[qid] or E.Done(qid) then return end -- (0: the data's way of saying none)
     seen[qid] = true
-    if not log[qid] and not E.QuestOK(qid) then return end
-    out[#out + 1] = { id = qid, log = log[qid] ~= nil, level = tonumber(Q("Quest", qid, "requiredLevel")) or 0, starts = starts }
+    local holiday -- a holiday's quest while the holiday is away: still a reason to keep it
+    if not log[qid] and not E.QuestOK(qid) then
+      if not E.QuestOK(qid, true) then return end
+      holiday = E.Holiday(qid) or ""
+    end
+    out[#out + 1] = { id = qid, log = log[qid] ~= nil, level = tonumber(Q("Quest", qid, "requiredLevel")) or 0, starts = starts,
+                      holiday = holiday, again = Q("Quest", qid, "specialFlags") == 1 or nil }
   end
   Add(Q("Item", id, "startQuest"), true)
   for qid in pairs(log) do QuestItems(qid, function(i) if i == id then Add(qid) end end) end
   for _, qid in ipairs(index and index[id] or {}) do Add(qid) end
   for _, qid in pairs(List(Q("Item", id, "relatedQuests"))) do Add(qid) end
+  for _, qid in ipairs(NS.QuestRec and NS.QuestRec.Wanting and NS.QuestRec.Wanting(id) or {}) do Add(qid) end -- what hand-in windows asked for
   table.sort(out, function(a, b) if a.log ~= b.log then return a.log end return a.level < b.level end)
   return out
 end
@@ -111,6 +117,17 @@ local cache, cacheAt = {}, 0
 function S.Forget() cache = {} end
 
 local function Money(c) return NS.Money(math.floor((c or 0) + 0.5)) end
+
+-- why a quest you don't have yet is a reason to keep it
+local function Wants(x, L)
+  local name = E.QuestName(x.id) .. (x.level > L and (" (from level " .. x.level .. ")") or "")
+  if x.holiday then
+    local h = x.holiday
+    return (h ~= "" and ("A " .. h .. " quest takes it: ") or "A holiday's quest takes it: ") .. name
+      .. (h ~= "" and (", when the " .. h .. " is on") or ", while its holiday is on") .. (x.again and ". It can be done again and again." or ".")
+  end
+  return (x.level <= L + 5 and "A quest you can do soon wants it: " or "A quest wants it: ") .. name .. "."
+end
 
 local function Work(id, link, bound)
   local name, l2, quality, _, reqLevel, _, _, _, equipLoc, _, vendor, class, sub, bind = NS.GetItemInfo(link or id)
@@ -143,13 +160,17 @@ local function Work(id, link, bound)
   -- quests
   local qs = S.Quests(id)
   r.quests = qs
-  local soon
+  local soon, fest
   for _, x in ipairs(qs) do
     if x.starts then return Say("keep", "It starts the quest " .. E.QuestName(x.id) .. ".") end
     if x.log then return Say("keep", "Your quest " .. E.QuestName(x.id) .. " needs it.") end
-    if not soon and x.level <= L + 5 then soon = x end
+    if x.holiday then fest = fest or x -- (a holiday months away only keeps quest items)
+    elseif not soon and x.level <= L + 5 then soon = x end
   end
-  if class == 12 then return Say("unsure", "A quest item, but none of your quests is known to need it. Read its tooltip before you part with it.") end
+  if class == 12 then
+    if soon or fest or qs[1] then return Say("keep", Wants(soon or fest or qs[1], L)) end
+    return Say("unsure", "A quest item, but none of your quests is known to need it. Read its tooltip before you part with it.")
+  end
   if class == 13 then return Say("keep", "A key.") end
   -- recipes you could learn
   if class == 9 then
@@ -185,8 +206,9 @@ local function Work(id, link, bound)
   for p2, n2 in pairs(mine) do if n2 > n then prof, n = p2, n2 end end
   if prof then return Say("keep", string.format("You use it: %s (%d recipe%s that still raise your skill).", prof, n, n == 1 and "" or "s")) end
   if soon and (class == 0 or class == 7) then -- cloth, herbs, food: plenty of repeatable quests take those, so that alone is no reason to hoard
-    r.alt = "A quest you could do takes it: " .. E.QuestName(soon.id) .. (soon.level > L and (" (from level " .. soon.level .. ")") or "") .. "."
-  elseif soon then return Say("keep", "A quest you can do soon wants it: " .. E.QuestName(soon.id) .. (soon.level > L and (" (from level " .. soon.level .. ")") or "") .. ".") end
+    r.alt = ("A quest you could do takes it: " .. E.QuestName(soon.id) .. (soon.level > L and (" (from level " .. soon.level .. ")") or "") .. ".")
+  elseif soon then return Say("keep", Wants(soon, L))
+  elseif fest then r.alt = Wants(fest, L) end
   for _, alt in ipairs(E.AltsWith and (function() local out = {} for p3 in pairs(other) do for _, a in ipairs(E.AltsWith(p3) or {}) do out[#out + 1] = { a, p3 } end end return out end)() or {}) do
     r.alt = r.alt or string.format("%s could use it (%s).", alt[1].name or "Another character", alt[2])
   end
